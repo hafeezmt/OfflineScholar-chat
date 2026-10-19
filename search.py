@@ -18,11 +18,11 @@ def bm25_search(query: str, top_k: int = 4) -> List[Tuple[str, str, int, str]]:
     Each result is a tuple: (content, path, chunk_index, source_section).
     """
     conn = get_connection()
-    # Use the BM25 ranking function provided by FTS5
+    conn = get_connection()
+    pattern = f"%{query}%"
     cur = conn.execute(
-        "SELECT content, path, chunk_index, source_section, rank "
-        "FROM passages WHERE passages MATCH ? ORDER BY rank LIMIT ?",
-        (query, top_k),
+        "SELECT content, path, chunk_index, source_section FROM passages WHERE content LIKE ? LIMIT ?",
+        (pattern, top_k),
     )
     results = [(row[0], row[1], row[2], row[3]) for row in cur.fetchall()]
     conn.close()

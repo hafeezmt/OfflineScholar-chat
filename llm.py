@@ -37,7 +37,8 @@ def build_prompt(question: str, passages: List[Tuple[str, str, int, str]], mode:
 
 def generate_answer(question: str, passages: List[Tuple[str, str, int, str]], mode: str = "Default", language: str = "English") -> str:
     """Send prompt to Ollama and stream the answer.
-    Returns the full answer string (including citations).
+    If Ollama is unavailable, return a simple fallback answer using the first passage.
+    Returns the answer string (including citations if possible).
     """
     prompt = build_prompt(question, passages, mode, language)
     try:
@@ -48,4 +49,9 @@ def generate_answer(question: str, passages: List[Tuple[str, str, int, str]], mo
                 answer_parts.append(chunk["response"])
         return "".join(answer_parts).strip()
     except Exception as e:
-        return f"Error contacting Ollama: {e}"
+        # Fallback handling
+        if passages:
+            fallback = f"[Fallback answer] {passages[0][0]}"
+        else:
+            fallback = "No passages available to generate an answer."
+        return fallback
