@@ -1,0 +1,39 @@
+/* Updated Custom CSS for a light, green-themed UI */
+
+body {
+    font-family: Arial, Helvetica, sans-serif;
+    background-color: #ffffff; /* white background */
+    color: #003300;          /* dark green text */
+}
+
+h1, h2, h3 {
+    color: #006600;
+}
+
+button, .gr-button {
+    background-color: #008800 !important;
+    color: #ffffff !important;
+    border-radius: 4px !important;
+    padding: 6px 12px !important;
+}
+
+textarea, input, .gr-textbox, .gr-dropdown {
+    border: 1px solid #66bb66 !important;
+    border-radius: 4px !important;
+    background-color: #f0fff0 !important;
+    color: #003300 !important;
+}
+
+.gr-tab-item {
+    background-color: #e6ffe6;
+}
+
+.gr-markdown {
+    line-height: 1.5;
+    margin-bottom: 12px;
+}
+
+.offline-badge {
+    font-weight: bold;
+    color: #004400;
+}

@@ -1,0 +1,10 @@
+# .gitignore
+# Python virtual environment
+venv/
+
+# SQLite database and history files
+library.db
+history.json
+
+# Library files (keep sample files, ignore large user data)
+library/*
