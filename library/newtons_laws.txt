@@ -1,0 +1,7 @@
+Newton's Laws of Motion (sample note)
+
+First law (inertia): an object stays at rest, or keeps moving in a straight line at constant speed, unless an unbalanced force acts on it. This is why passengers lurch forward when a bus brakes suddenly.
+
+Second law: the acceleration of an object depends on the net force acting on it and its mass. The formula is F = m x a, where F is force in newtons, m is mass in kilograms and a is acceleration in metres per second squared. A heavier object needs more force to accelerate at the same rate.
+
+Third law: for every action there is an equal and opposite reaction. When you push a wall, the wall pushes back on you with the same size of force. Rockets move forward because they push gas backwards.

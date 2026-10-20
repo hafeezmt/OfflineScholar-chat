@@ -1,0 +1,95 @@
+"""Read files from the library folder, split them into chunks and index them."""
+import re
+import zipfile
+from pathlib import Path
+
+import config
+import store
+
+
+def read_sections(path: Path):
+    """Return a list of (label, text) sections for a file."""
+    ext = path.suffix.lower()
+    if ext in (".txt", ".md"):
+        return [("full text", path.read_text(encoding="utf-8", errors="ignore"))]
+    if ext == ".pdf":
+        from pypdf import PdfReader
+
+        out = []
+        for i, page in enumerate(PdfReader(str(path)).pages, start=1):
+            try:
+                out.append((f"page {i}", page.extract_text() or ""))
+            except Exception:
+                continue
+        return out
+    if ext == ".docx":
+        with zipfile.ZipFile(path) as z:
+            xml = z.read("word/document.xml").decode("utf-8", errors="ignore")
+        xml = re.sub(r"</w:p>", "\n", xml)
+        return [("full text", re.sub(r"<[^>]+>", "", xml))]
+    return []
+
+
+def chunk_words(text, size=None, overlap=None):
+    size = size or config.CHUNK_WORDS
+    overlap = config.CHUNK_OVERLAP if overlap is None else overlap
+    words = text.split()
+    if not words:
+        return []
+    step = max(1, size - overlap)
+    return [" ".join(words[i:i + size]) for i in range(0, len(words), step)]
+
+
+def library_files(folder=None):
+    folder = Path(folder or config.LIBRARY_DIR)
+    return sorted(p for p in folder.rglob("*") if p.is_file() and p.suffix.lower() in config.SUPPORTED)
+
+
+def scan_library(con, embed_fn=None, folder=None):
+    """Index new or changed files. embed_fn(list_of_texts) -> list of vectors (optional)."""
+    notes, added, skipped = [], 0, 0
+    files = library_files(folder)
+    on_disk = {str(p) for p in files}
+
+    for (path,) in con.execute("SELECT path FROM files").fetchall():
+        if path not in on_disk:
+            store.remove_file(con, path)
+
+    embed_ok = embed_fn is not None
+    for p in files:
+        st = p.stat()
+        row = con.execute("SELECT mtime,size,has_emb FROM files WHERE path=?", (str(p),)).fetchone()
+        unchanged = row and row[0] == st.st_mtime and row[1] == st.st_size
+        if unchanged and (row[2] or not embed_ok):
+            skipped += 1
+            continue
+        try:
+            sections = read_sections(p)
+        except Exception as e:
+            notes.append(f"Could not read {p.name}: {e}")
+            continue
+        pieces = []
+        for label, text in sections:
+            for c in chunk_words(text):
+                pieces.append((label, c))
+        if not pieces:
+            notes.append(f"{p.name} has no readable text (scanned PDF?)")
+            continue
+        vectors = [None] * len(pieces)
+        if embed_ok:
+            try:
+                vecs = []
+                for i in range(0, len(pieces), 16):
+                    vecs.extend(embed_fn([t for _, t in pieces[i:i + 16]]))
+                vectors = vecs
+            except Exception as e:
+                embed_ok = False
+                notes.append(f"Meaning-based search is off ({e}). Using keyword search.")
+        store.remove_file(con, str(p))
+        store.add_chunks(con, str(p), [(l, t, v) for (l, t), v in zip(pieces, vectors)])
+        con.execute("INSERT OR REPLACE INTO files VALUES (?,?,?,?)",
+                    (str(p), st.st_mtime, st.st_size, 1 if vectors[0] is not None else 0))
+        added += 1
+    con.commit()
+    msg = f"Indexed {added} new or changed file(s), {skipped} unchanged, {len(files)} total."
+    return " ".join([msg] + notes)

@@ -1,0 +1,4 @@
+gradio>=4.44
+ollama>=0.4
+numpy>=1.26
+pypdf>=4.0

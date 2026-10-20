@@ -1,0 +1,47 @@
+"""Quick check that indexing and search work. Does not need Ollama or internet."""
+import hashlib
+import tempfile
+from pathlib import Path
+
+import numpy as np
+
+import config
+import ingest
+import search
+import store
+
+
+def fake_embed(texts, query=False):
+    """Stand-in for the real embedding model: hashes words into a small vector."""
+    out = []
+    for t in texts:
+        v = np.zeros(64)
+        for w in t.lower().split():
+            v[int(hashlib.md5(w.encode()).hexdigest(), 16) % 64] += 1
+        out.append(v.tolist())
+    return out
+
+
+def run():
+    with tempfile.TemporaryDirectory() as tmp:
+        con = store.connect(Path(tmp) / "t.db")
+        print(ingest.scan_library(con))                      # keyword only
+        print(ingest.scan_library(con))                      # second run: nothing new
+        hits = search.find("What is photosynthesis and chlorophyll?", con=con)
+        assert hits and "photosynthesis" in hits[0]["path"], hits
+        print("Keyword search OK ->", hits[0]["path"].split("/")[-1])
+
+        print(ingest.scan_library(con, embed_fn=fake_embed))  # adds embeddings
+        hits = search.find("force equals mass times acceleration", con=con, embed_fn=fake_embed)
+        assert hits and "newton" in hits[0]["path"], hits
+        print("Hybrid search OK ->", hits[0]["path"].split("/")[-1])
+
+        none = store.keyword_search(con, "zebra spaceship quantum", 4)
+        assert none == [], none
+        print("Unrelated question finds nothing OK")
+    print("All checks passed.")
+
+
+if __name__ == "__main__":
+    assert config.LIBRARY_DIR.exists()
+    run()
