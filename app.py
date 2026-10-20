@@ -129,9 +129,35 @@ def clear_index():
     return "Index cleared. Your files are still in the library; press Re-scan library to index them again."
 
 
+def _size(n):
+    for unit in ("B", "KB", "MB"):
+        if n < 1024 or unit == "MB":
+            return f"{n:.0f} {unit}" if unit == "B" else f"{n:.1f} {unit}"
+        n /= 1024
+
+
 def library_list():
     files = ingest.library_files()
-    return "\n".join(f"- {p.name}" for p in files) or "No files yet."
+    if not files:
+        return "No files yet."
+    con = store.connect()
+    try:
+        indexed = {row[0]: row[1] for row in con.execute("SELECT path, has_emb FROM files")}
+    finally:
+        con.close()
+    lines, total = [], 0
+    for p in files:
+        try:
+            size = p.stat().st_size
+        except OSError:
+            size = 0
+        total += size
+        if str(p) not in indexed:
+            state = "not indexed"
+        else:
+            state = "indexed with embeddings" if indexed[str(p)] else "indexed (keyword only)"
+        lines.append(f"- {p.name} ({_size(size)}, {state})")
+    return f"**{len(files)} file(s), {_size(total)}**\n" + "\n".join(lines)
 
 
 with gr.Blocks(title="OfflineScholar") as demo:
