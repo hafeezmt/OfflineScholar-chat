@@ -71,6 +71,8 @@ def rescan():
         return ingest.scan_library(con, embed_fn=llm.embed if config.USE_EMBEDDINGS else None)
     except Exception as e:
         return f"Re-scan problem: {e}"
+    finally:
+        con.close()
 
 
 def add_files(files):
