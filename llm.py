@@ -32,6 +32,15 @@ def embed(texts, query=False):
     return resp["embeddings"]
 
 
+def trim_history(history, limit=8):
+    """Keep the last few turns, starting with a user message so the model is not fed an orphan reply."""
+    msgs = [m for m in (history or []) if (m.get("content") or "").strip()]
+    msgs = msgs[-limit:]
+    while msgs and msgs[0].get("role") != "user":
+        msgs.pop(0)
+    return msgs
+
+
 def chat_stream(history, message, mode="Just chat", language="English", passages=None):
     """history: list of {"role","content"} dicts. Yields the reply piece by piece."""
     system = f"{BASE_SYSTEM}\n{MODES.get(mode, MODES['Just chat'])} {LANGUAGES.get(language, LANGUAGES['English'])}"
@@ -43,7 +52,8 @@ def chat_stream(history, message, mode="Just chat", language="English", passages
             "\n\nThe student's own notes are below. Use them when they are relevant and mention the "
             f"passage number like [1]. If they are not relevant, answer normally.\n\nNOTES:\n{context}"
         )
-    messages = [{"role": "system", "content": system}] + list(history)[-8:] + [{"role": "user", "content": message}]
+    messages = [{"role": "system", "content": system}] + trim_history(history) + [
+        {"role": "user", "content": message}]
     stream = ollama.chat(
         model=config.CHAT_MODEL,
         messages=messages,
