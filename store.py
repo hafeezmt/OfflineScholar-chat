@@ -65,10 +65,15 @@ def semantic_search(con, qvec, k):
     rows = con.execute("SELECT id,path,label,text,emb FROM chunks WHERE emb IS NOT NULL").fetchall()
     if not rows:
         return []
-    mat = np.stack([np.frombuffer(r[4], dtype=np.float32) for r in rows])
-    q = np.asarray(qvec, dtype=np.float32)
+    q = np.asarray(qvec, dtype=np.float32).ravel()
     n = np.linalg.norm(q)
     q = q / n if n else q
+    # Vectors indexed with a different embedding model have another size; skip them
+    # instead of crashing numpy when stacking.
+    rows = [r for r in rows if len(r[4]) == q.size * 4]
+    if not rows:
+        return []
+    mat = np.stack([np.frombuffer(r[4], dtype=np.float32) for r in rows])
     scores = mat @ q
     order = np.argsort(-scores)[:k]
     return [dict(id=rows[i][0], path=rows[i][1], label=rows[i][2], text=rows[i][3]) for i in order
