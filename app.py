@@ -1,6 +1,7 @@
 """OfflineScholar: chat with an AI with NO internet. Gemma 4 runs locally through Ollama.
 Optional: add your own notes and let it search them (Snowflake Arctic Embed, also local)."""
 import shutil
+from pathlib import Path
 
 import gradio as gr
 
@@ -78,9 +79,38 @@ def rescan():
 def add_files(files):
     if not files:
         return "Choose one or more files first."
+    config.LIBRARY_DIR.mkdir(exist_ok=True)
+    copied, updated, skipped, problems = 0, [], [], []
     for f in files:
-        shutil.copy(f if isinstance(f, str) else f.name, config.LIBRARY_DIR)
-    return rescan()
+        src = Path(f if isinstance(f, str) else f.name)
+        if not src.is_file():
+            problems.append(f"{src.name} was not found")
+            continue
+        if src.suffix.lower() not in config.SUPPORTED:
+            problems.append(f"{src.name} is not a supported type")
+            continue
+        dest = config.LIBRARY_DIR / src.name
+        try:
+            if src.resolve() == dest.resolve():
+                skipped.append(src.name)
+                continue
+            if dest.exists():
+                if dest.read_bytes() == src.read_bytes():
+                    skipped.append(src.name)
+                    continue
+                updated.append(src.name)
+            shutil.copyfile(src, dest)
+            copied += 1
+        except OSError as e:
+            problems.append(f"{src.name}: {e}")
+    msg = f"Added {copied} file(s)."
+    if updated:
+        msg += f" Updated: {', '.join(updated)}."
+    if skipped:
+        msg += f" Already in library: {', '.join(skipped)}."
+    if problems:
+        msg += " " + "; ".join(problems) + "."
+    return msg + "\n" + rescan()
 
 
 def save_url(url):
