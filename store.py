@@ -95,5 +95,13 @@ def hybrid_search(con, query, qvec, k):
     return [items[i] for i in best]
 
 
+def clear_index(con):
+    """Drop everything that was indexed. The files on disk are left alone."""
+    con.execute("DELETE FROM chunks_fts")
+    con.execute("DELETE FROM chunks")
+    con.execute("DELETE FROM files")
+    con.commit()
+
+
 def has_any_embeddings(con):
     return con.execute("SELECT 1 FROM chunks WHERE emb IS NOT NULL LIMIT 1").fetchone() is not None

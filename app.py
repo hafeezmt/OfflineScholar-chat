@@ -118,6 +118,17 @@ def save_url(url):
     return msg + ("\n" + rescan() if msg.startswith("Saved") else "")
 
 
+def clear_index():
+    con = store.connect()
+    try:
+        store.clear_index(con)
+    except Exception as e:
+        return f"Could not clear the index: {e}"
+    finally:
+        con.close()
+    return "Index cleared. Your files are still in the library; press Re-scan library to index them again."
+
+
 def library_list():
     files = ingest.library_files()
     return "\n".join(f"- {p.name}" for p in files) or "No files yet."
@@ -144,12 +155,15 @@ with gr.Blocks(title="OfflineScholar") as demo:
         upload = gr.File(label="Add notes (.pdf, .docx, .txt, .md)", file_count="multiple")
         add_btn = gr.Button("Add files")
         scan_btn = gr.Button("Re-scan library")
+        clear_btn = gr.Button("Clear index (keeps files)")
         url = gr.Textbox(label="Save a web page for offline (needs internet once)", placeholder="https://...")
         save_btn = gr.Button("Save page")
         status = gr.Markdown()
         add_btn.click(add_files, upload, status).then(library_list, None, files_md)
         scan_btn.click(rescan, None, status).then(library_list, None, files_md)
+        clear_btn.click(clear_index, None, status)
         save_btn.click(save_url, url, status).then(library_list, None, files_md)
+        demo.load(library_list, None, files_md)
 
 if __name__ == "__main__":
     demo.launch()
