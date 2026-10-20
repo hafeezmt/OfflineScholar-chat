@@ -1,5 +1,10 @@
 venv/
+.venv/
 __pycache__/
+*.pyc
+.gradio/
+.pytest_cache/
 scholar.db
 scholar.db-*
 library/saved_pages/
+.DS_Store
