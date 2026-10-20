@@ -78,12 +78,17 @@ def scan_library(con, embed_fn=None, folder=None):
         vectors = [None] * len(pieces)
         if embed_ok:
             try:
-                vecs = []
+                vectors = []
                 for i in range(0, len(pieces), 16):
-                    vecs.extend(embed_fn([t for _, t in pieces[i:i + 16]]))
-                vectors = vecs
+                    batch = [t for _, t in pieces[i:i + 16]]
+                    got = embed_fn(batch)
+                    if len(got) != len(batch):
+                        raise ValueError(
+                            f"embedding model returned {len(got)} vectors for {len(batch)} chunks")
+                    vectors.extend(got)
             except Exception as e:
                 embed_ok = False
+                vectors = [None] * len(pieces)
                 notes.append(f"Meaning-based search is off ({e}). Using keyword search.")
         store.remove_file(con, str(p))
         store.add_chunks(con, str(p), [(l, t, v) for (l, t), v in zip(pieces, vectors)])
