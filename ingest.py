@@ -1,4 +1,5 @@
 """Read files from the library folder, split them into chunks and index them."""
+import html
 import re
 import zipfile
 from pathlib import Path
@@ -26,7 +27,8 @@ def read_sections(path: Path):
         with zipfile.ZipFile(path) as z:
             xml = z.read("word/document.xml").decode("utf-8", errors="ignore")
         xml = re.sub(r"</w:p>", "\n", xml)
-        return [("full text", re.sub(r"<[^>]+>", "", xml))]
+        xml = re.sub(r"<w:(?:tab|br)\s*/>", " ", xml)
+        return [("full text", html.unescape(re.sub(r"<[^>]+>", "", xml)))]
     return []
 
 
