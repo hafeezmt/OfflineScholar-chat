@@ -1,4 +1,6 @@
 """All calls to the local Ollama server (Gemma 4 for chat, Snowflake Arctic Embed for searching notes)."""
+from pathlib import Path
+
 import ollama
 
 import config
@@ -48,7 +50,7 @@ def chat_stream(history, message, mode="Just chat", language="English", passages
     system = f"{BASE_SYSTEM}\n{MODES.get(mode, MODES['Just chat'])} {LANGUAGES.get(language, LANGUAGES['English'])}"
     if passages:
         context = "\n\n".join(
-            f"[{i}] ({p['path'].split('/')[-1]}, {p['label']})\n{p['text']}" for i, p in enumerate(passages, 1)
+            f"[{i}] ({Path(p['path']).name}, {p['label']})\n{p['text']}" for i, p in enumerate(passages, 1)
         )
         system += (
             "\n\nThe student's own notes are below. Use them when they are relevant and mention the "

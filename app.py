@@ -62,7 +62,7 @@ def chat(message, history, mode, language, use_notes):
         return
     if passages:
         text += "\n\n*From your notes:* " + ", ".join(
-            f"[{i}] {p['path'].split('/')[-1]} ({p['label']})" for i, p in enumerate(passages, 1))
+            f"[{i}] {Path(p['path']).name} ({p['label']})" for i, p in enumerate(passages, 1))
         yield text
 
 
