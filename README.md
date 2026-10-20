@@ -36,12 +36,23 @@ python app.py
 
 Open the link it prints (usually http://127.0.0.1:7860).
 
+Prefer the terminal? The same library and models work without a browser:
+
+```bash
+python cli.py index                          # index new or changed notes
+python cli.py list                           # show files and index state
+python cli.py search "photosynthesis"        # find matching passages
+python cli.py ask "explain Newton's second law" --mode "Explain simply"
+```
+
 ## Features
 
 - Normal chat that remembers the conversation
 - Study modes: just chat, explain simply, homework helper, essay outline, quiz me, summarize my text
 - Replies in English, Nigerian Pidgin or Hausa
 - Optional notes: add .pdf, .docx, .txt, .md files or saved web pages, tick "Also search my notes", and the AI uses them and shows which file it used
+- Notes list shows each file's size and whether it is indexed
+- Clear the index without deleting your files, then re-scan
 - Friendly messages when Ollama is not running or the model is not installed
 
 ## Settings (environment variables)
@@ -50,13 +61,27 @@ Open the link it prints (usually http://127.0.0.1:7860).
 |---|---|---|
 | `OS_MODEL` | `gemma4:e2b-it-qat` | Chat model. Any Ollama chat model works, for example `gemma3:1b` |
 | `OS_EMBED` | `snowflake-arctic-embed:33m` | Notes search model |
-| `OS_EMBEDDINGS` | `1` | Set to `0` for keyword-only notes search |
+| `OS_EMBEDDINGS` | `1` | Set to `0`/`off` for keyword-only notes search |
+| `OS_TOP_K` | `4` | How many note passages to give the model |
+| `OS_NUM_CTX` | `2048` | Context window for the chat model |
+| `OS_TEMPERATURE` | `0.5` | Answer randomness, between 0 and 2 |
+| `OS_HISTORY` | `8` | Messages kept from the conversation |
+| `OS_CHUNK_WORDS` | `250` | Words per indexed chunk |
+| `OS_CHUNK_OVERLAP` | `40` | Words shared by neighbouring chunks |
 
 ## Check the notes search works
 
 ```bash
-python test_core.py
+python test_core.py       # indexing and search with sample notes
+python test_features.py   # chunking, uploads, history and page extraction
 ```
+
+## Troubleshooting
+
+- **"The model isn't installed"**: run `ollama pull gemma4:e2b-it-qat` (and `ollama pull snowflake-arctic-embed:33m` for notes search).
+- **"I can't reach Ollama"**: start it with `ollama serve`.
+- **Search misses your notes**: open My notes and press Re-scan library; if the file shows "not indexed", it could not be read (scanned PDFs have no text layer).
+- **Wrong or stale answers from notes**: press "Clear index (keeps files)" and then Re-scan library.
 
 ## Low memory tip
 
