@@ -31,13 +31,21 @@ def read_sections(path: Path):
 
 
 def chunk_words(text, size=None, overlap=None):
-    size = size or config.CHUNK_WORDS
+    size = max(1, size or config.CHUNK_WORDS)
     overlap = config.CHUNK_OVERLAP if overlap is None else overlap
+    overlap = max(0, min(overlap, size - 1))
     words = text.split()
     if not words:
         return []
+    if len(words) <= size:
+        return [" ".join(words)]
     step = max(1, size - overlap)
-    return [" ".join(words[i:i + size]) for i in range(0, len(words), step)]
+    chunks = []
+    for i in range(0, len(words), step):
+        chunks.append(" ".join(words[i:i + size]))
+        if i + size >= len(words):
+            break
+    return chunks
 
 
 def library_files(folder=None):
