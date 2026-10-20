@@ -12,13 +12,17 @@ STOP = set("a an the is are was were be of to in on at for and or what why how w
 
 
 def connect(db_path=None):
-    con = sqlite3.connect(str(db_path or config.DB_PATH))
+    con = sqlite3.connect(str(db_path or config.DB_PATH), timeout=10)
+    con.execute("PRAGMA journal_mode=WAL")
+    con.execute("PRAGMA synchronous=NORMAL")
+    con.execute("PRAGMA busy_timeout=5000")
     con.executescript(
         """
         CREATE TABLE IF NOT EXISTS files(path TEXT PRIMARY KEY, mtime REAL, size INTEGER, has_emb INTEGER);
         CREATE TABLE IF NOT EXISTS chunks(id INTEGER PRIMARY KEY AUTOINCREMENT, path TEXT, label TEXT,
                                           text TEXT, emb BLOB);
         CREATE VIRTUAL TABLE IF NOT EXISTS chunks_fts USING fts5(text);
+        CREATE INDEX IF NOT EXISTS idx_chunks_path ON chunks(path);
         """
     )
     return con
