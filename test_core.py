@@ -3,8 +3,6 @@ import hashlib
 import tempfile
 from pathlib import Path
 
-import numpy as np
-
 import config
 import ingest
 import search
@@ -15,10 +13,10 @@ def fake_embed(texts, query=False):
     """Stand-in for the real embedding model: hashes words into a small vector."""
     out = []
     for t in texts:
-        v = np.zeros(64)
+        v = [0.0] * 64
         for w in t.lower().split():
             v[int(hashlib.md5(w.encode()).hexdigest(), 16) % 64] += 1
-        out.append(v.tolist())
+        out.append(v)
     return out
 
 

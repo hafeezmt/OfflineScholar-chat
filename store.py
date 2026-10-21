@@ -2,8 +2,7 @@
 import re
 import sqlite3
 import time
-
-import numpy as np
+from array import array
 
 import config
 
@@ -52,14 +51,18 @@ def remove_file(con, path):
     con.execute("DELETE FROM files WHERE path=?", (path,))
 
 
+def _normalise(values):
+    vector = [float(value) for value in values]
+    norm = sum(value * value for value in vector) ** 0.5
+    return [value / norm for value in vector] if norm else vector
+
+
 def add_chunks(con, path, rows):
     """rows: list of (label, text, vector_or_None)"""
     for label, text, vec in rows:
         blob = None
         if vec is not None:
-            v = np.asarray(vec, dtype=np.float32)
-            n = np.linalg.norm(v)
-            blob = (v / n if n else v).tobytes()
+            blob = array("f", _normalise(vec)).tobytes()
         cur = con.execute("INSERT INTO chunks(path,label,text,emb) VALUES (?,?,?,?)", (path, label, text, blob))
         con.execute("INSERT INTO chunks_fts(rowid,text) VALUES (?,?)", (cur.lastrowid, text))
 
@@ -81,19 +84,24 @@ def semantic_search(con, qvec, k):
     rows = con.execute("SELECT id,path,label,text,emb FROM chunks WHERE emb IS NOT NULL").fetchall()
     if not rows:
         return []
-    q = np.asarray(qvec, dtype=np.float32).ravel()
-    n = np.linalg.norm(q)
-    q = q / n if n else q
-    # Vectors indexed with a different embedding model have another size; skip them
-    # instead of crashing numpy when stacking.
-    rows = [r for r in rows if len(r[4]) == q.size * 4]
+    query = _normalise(qvec)
+    if not query:
+        return []
+    # Vectors indexed with a different embedding model have another size; skip them.
+    rows = [r for r in rows if len(r[4]) == len(query) * 4]
     if not rows:
         return []
-    mat = np.stack([np.frombuffer(r[4], dtype=np.float32) for r in rows])
-    scores = mat @ q
-    order = np.argsort(-scores)[:k]
-    return [dict(id=rows[i][0], path=rows[i][1], label=rows[i][2], text=rows[i][3],
-                 score=float(scores[i])) for i in order if scores[i] > 0.15]
+    scores = []
+    for row in rows:
+        vector = array("f")
+        vector.frombytes(row[4])
+        if len(vector) != len(query):
+            continue
+        score = sum(left * right for left, right in zip(query, vector))
+        scores.append((score, row))
+    scores.sort(key=lambda item: item[0], reverse=True)
+    return [dict(id=row[0], path=row[1], label=row[2], text=row[3], score=float(score))
+            for score, row in scores[:k] if score > 0.15]
 
 
 def hybrid_search(con, query, qvec, k):

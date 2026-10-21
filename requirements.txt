@@ -1,6 +1,4 @@
 fastapi>=0.115
-gradio>=4.44
-numpy>=1.26
 ollama>=0.4
 pypdf>=4.0
 python-multipart>=0.0.9

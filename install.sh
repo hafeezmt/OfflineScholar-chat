@@ -179,8 +179,7 @@ start_ollama() {
 install_python_packages() {
   info "Setting up the Python environment"
   python3 -m venv "$INSTALL_DIR/venv"
-  "$INSTALL_DIR/venv/bin/python" -m pip install --upgrade pip
-  "$INSTALL_DIR/venv/bin/python" -m pip install -r "$INSTALL_DIR/requirements.txt"
+  "$INSTALL_DIR/venv/bin/python" -m pip install --disable-pip-version-check -r "$INSTALL_DIR/requirements.txt"
 }
 
 write_start_script() {

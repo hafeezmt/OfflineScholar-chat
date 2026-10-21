@@ -11,7 +11,7 @@ Students often need help with assignments and research exactly when data is expe
 - **Gemma 3 1B** (`gemma3:1b`) or **Qwen 2.5 1.5B** (`qwen2.5:1.5b`) runs locally through **Ollama** on 8 GB laptops; **Gemma 4** (`gemma4:e2b-it-qat`) gives the strongest answers when more RAM is free.
 - **Snowflake Arctic Embed** (`snowflake-arctic-embed:33m`), Snowflake's open-weight embedding model, also local through Ollama. It powers the optional "search my notes" feature.
 - A small FastAPI server with a hand-written offline web interface (no CDN, no cloud), plus SQLite for chats and the notes index.
-- The original Gradio interface is still included as `gradio_app.py` if you prefer it.
+- The original Gradio interface is optional; see `gradio_app.py` if you prefer it.
 
 Nothing leaves the laptop. The only network feature is the optional "Save a web page" button; the app itself answers offline.
 
@@ -31,8 +31,9 @@ curl -fsSL https://raw.githubusercontent.com/hafeezmt/OfflineScholar-chat/main/i
 
 The installer downloads the app into `~/OfflineScholar`, installs Ollama and Python if they
 are missing, downloads the small chat and notes models, and starts OfflineScholar at
-http://127.0.0.1:7860. The first run needs internet and about 2-3 GB of space; after that the
-app works offline.
+http://127.0.0.1:7860. It installs only the lightweight web app dependencies (the old Gradio
+interface is skipped), so setup is faster. The first run needs internet and about 2-3 GB of
+space; after that the app works offline.
 
 To choose another folder or port:
 
@@ -76,7 +77,8 @@ python app.py
 Open http://127.0.0.1:7860. Ollama is usually already running as a service; if it is not,
 start it in another terminal with `ollama serve`. For an app-style window without browser
 tabs, run `./launch.sh` — it starts the local service first if needed. The original Gradio
-interface is still available with `python gradio_app.py`.
+interface is optional: install it with `pip install -r requirements-gradio.txt`, then run
+`python gradio_app.py`.
 
 ### Run in the background (optional)
 

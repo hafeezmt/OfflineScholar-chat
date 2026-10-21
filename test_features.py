@@ -3,7 +3,13 @@ import tempfile
 import unittest
 from pathlib import Path
 
-import gradio_app as app
+try:
+    import gradio_app as app
+except ModuleNotFoundError as error:
+    if (error.name or "").split(".")[0] != "gradio":
+        raise
+    app = None
+
 import config
 import ingest
 import llm
@@ -116,6 +122,7 @@ class IngestTests(unittest.TestCase):
         self.assertTrue(store.keyword_search(self.con, "force", 3))
 
 
+@unittest.skipIf(app is None, "optional Gradio UI is not installed")
 class HistoryTests(unittest.TestCase):
     def test_normalize_dict_and_tuple_history(self):
         history = [
@@ -140,6 +147,7 @@ class HistoryTests(unittest.TestCase):
         self.assertEqual(llm.trim_history(history, 0), [])
 
 
+@unittest.skipIf(app is None, "optional Gradio UI is not installed")
 class UploadTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -226,6 +234,7 @@ class ModelChoiceTests(unittest.TestCase):
         self.assertEqual(llm.default_model(["tinyllama:latest"]), "tinyllama:latest")
 
 
+@unittest.skipIf(app is None, "optional Gradio UI is not installed")
 class UiTests(unittest.TestCase):
     def test_chat_history_is_saved(self):
         self.assertTrue(app.chat_ui.save_history)

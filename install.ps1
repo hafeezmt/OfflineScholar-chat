@@ -158,11 +158,7 @@ if (-not (Test-Path $venvPython)) {
         Stop-Install "Could not create the Python environment."
     }
 }
-& $venvPython -m pip install --upgrade pip
-if ($LASTEXITCODE -ne 0) {
-    Stop-Install "Could not update pip."
-}
-& $venvPython -m pip install -r (Join-Path $InstallDir "requirements.txt")
+& $venvPython -m pip install --disable-pip-version-check -r (Join-Path $InstallDir "requirements.txt")
 if ($LASTEXITCODE -ne 0) {
     Stop-Install "Could not install the Python packages."
 }
