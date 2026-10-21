@@ -332,3 +332,7 @@ On an 8 GB laptop, close browser tabs you don't need. OfflineScholar switches to
 small lite model automatically, but the first reply after `offlinescholar up` still takes a
 few seconds while the model loads. If the desktop starts to stutter, lower `OS_NUM_THREAD` or
 use `python cli.py ask` instead of the browser interface.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
