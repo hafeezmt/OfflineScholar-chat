@@ -173,6 +173,14 @@ class PromptTests(unittest.TestCase):
         self.assertIn("cannot verify current", answer)
         self.assertNotIn("3.12", answer)
 
+    def test_time_sensitive_question_is_refused_even_when_notes_match(self):
+        notes = [passage(1, "Gombe State University is in Gombe State.", score=0.08)]
+        answer = "".join(services.answer_stream(
+            [], "Who is the current governor of Gombe State?", "Just chat", "English",
+            True, "gemma3:1b", passages=notes))
+        self.assertIn("cannot verify current", answer)
+        self.assertNotIn("EXCELLENCE", answer)
+
     def test_prompt_injection_is_refused_before_the_model(self):
         with mock.patch.object(llm, "chat_stream") as chat:
             answer = "".join(services.answer_stream(

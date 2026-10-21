@@ -66,6 +66,7 @@ RAG_PASSAGE_WORDS = _int_env("OS_RAG_PASSAGE_WORDS", 90, minimum=20)
 EXTRACTIVE_RAG = _bool_env("OS_EXTRACTIVE_RAG", True)
 WEB_MAX_RESULTS = _int_env("OS_WEB_MAX_RESULTS", 5)
 EXTRACTIVE_WEB = _bool_env("OS_EXTRACTIVE_WEB", True)
+LIVE_LOOKUP_ENABLED = False
 
 # Chat generation
 NUM_CTX = _int_env("OS_NUM_CTX", 2048, minimum=512)

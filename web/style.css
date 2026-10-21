@@ -976,6 +976,10 @@ svg {
   transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
+.pill[hidden] {
+  display: none;
+}
+
 .pill:hover {
   border-color: var(--brand);
   color: var(--brand);

@@ -187,7 +187,7 @@ def chat(request: ChatRequest):
         try:
             for token in services.answer_stream(history, message, request.mode, request.language,
                                                 request.use_notes, model, passages=passages,
-                                                use_web=request.use_web,
+                                                use_web=config.LIVE_LOOKUP_ENABLED and request.use_web,
                                                 web_sink=web_passages):
                 parts.append(token)
                 yield _sse({"type": "token", "text": token})

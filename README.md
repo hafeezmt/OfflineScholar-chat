@@ -13,7 +13,7 @@ Students often need help with assignments and research exactly when data is expe
 - A small FastAPI server with a hand-written offline web interface (no CDN, no cloud), plus SQLite for chats and the notes index.
 - The original Gradio interface is still included as `gradio_app.py` if you prefer it.
 
-Nothing leaves the laptop by default. The only network features are the optional "Save a web page" button and the opt-in **Live lookup** switch for current facts.
+Nothing leaves the laptop. The only network feature is the optional "Save a web page" button; the app itself answers offline.
 
 ## Setup (Fedora / Linux)
 
@@ -87,7 +87,6 @@ python cli.py ask "explain Newton's second law" --mode "Explain simply"
 - Replies in English, Nigerian Pidgin or Hausa
 - Grounded notes answers: add .pdf, .docx, .txt, .md files or saved web pages, switch on "Use notes", and relevant passages are quoted with `[1]` citations; unrelated notes are rejected instead of being forced into every answer
 - Honest limits: if the notes do not cover a question, the app says so; current or time-sensitive questions such as "latest version" are refused offline instead of guessed
-- Opt-in **Live lookup** for current facts such as the latest Python release, the current governor, or a university vice-chancellor. It quotes a dated web snippet with a clickable source, and stays off by default
 - Notes library drawer with each file's size and index state, plus re-scan and clear
 - Conversation history in a sidebar: search, rename or delete chats, and reopen them later
 - Model picker, plus automatic low-RAM mode so the laptop stays responsive
@@ -108,8 +107,6 @@ python cli.py ask "explain Newton's second law" --mode "Explain simply"
 | `OS_RAG_MIN_MARGIN` | `0.06` | Drop weaker matches too far below the best one |
 | `OS_RAG_PASSAGE_WORDS` | `90` | Maximum note words placed in the prompt |
 | `OS_EXTRACTIVE_RAG` | `1` | Quote notes directly with a citation instead of asking the model to repeat them |
-| `OS_WEB_MAX_RESULTS` | `5` | Web snippets kept for a live answer |
-| `OS_EXTRACTIVE_WEB` | `1` | Quote the best dated web snippet directly instead of asking the model to repeat it |
 | `OS_NUM_CTX` | `2048` | Context window for the chat model |
 | `OS_TEMPERATURE` | `0.2` | Answer randomness, between 0 and 2 |
 | `OS_HISTORY` | `8` | Messages kept from the conversation |
@@ -130,20 +127,10 @@ python cli.py ask "explain Newton's second law" --mode "Explain simply"
 1. The question is matched against paragraph-sized note chunks. Weak or unrelated matches are dropped.
 2. If the best passage contains the question's key terms, its answer sentences are quoted directly with a `[1]` citation. This is instant and cannot be hallucinated.
 3. If the notes do not contain the answer, the app replies "Your notes do not cover that" instead of guessing.
-4. When Live lookup is off, "latest/current" questions are refused instead of guessed; known false premises such as "Newton's fourth law" are corrected.
+4. "Latest/current" questions are refused instead of guessed; known false premises such as "Newton's fourth law" are corrected.
 5. General questions still use the local chat model with a short prompt and no notes.
 
 Set `OS_EXTRACTIVE_RAG=0` to always let the model write the answer from notes (slower, and small models may forget citations).
-
-## Live lookup (optional)
-
-Switch on **Live lookup** next to the message box when you need something current: "What is the latest version of Python?", "Who is the current governor of Gombe State?", or "Who is the ViceChancellor of Gombe State University?". It is off by default, so normal study answers stay fully local.
-
-- The question is sent to a public search page (Brave, with DuckDuckGo and Wikipedia as fallbacks). No API key or account is needed.
-- The app quotes the best matching snippet, adds the date it checked, and shows the sources. Click a source chip to open the original page.
-- If the snippet is not a clean direct answer, the local model writes a short answer from the retrieved snippets instead.
-- Web pages can be stale or wrong. Prefer official pages (for example `python.org`, `gsu.edu.ng`, or a government site), and check the linked source before relying on a current fact.
-- Live lookup needs an internet connection and adds a few seconds for the search. If it fails, the app says so and does not invent an answer.
 
 ## Check quality and speed
 

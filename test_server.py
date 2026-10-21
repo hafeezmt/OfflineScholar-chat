@@ -104,16 +104,11 @@ class ServerTests(unittest.TestCase):
         self.assertIn("photosynthesis.txt", response.text)
         self.assertIn('"grounded": true', response.text)
 
-    def test_chat_web_lookup_returns_live_sources(self):
-        live = {"path": "https://pgf.ng/profile", "url": "https://pgf.ng/profile",
-                "name": "pgf.ng", "label": "Governor profile",
-                "text": "Muhammad Inuwa Yahaya is serving as governor.", "score": 1.0}
-
+    def test_chat_ignores_web_lookup_requests(self):
         def fake_stream(history, message, mode, language, use_notes, model, passages=None,
                         use_web=False, web_sink=None):
-            self.assertTrue(use_web)
-            web_sink.extend([live])
-            yield "Muhammad Inuwa Yahaya is the governor [1]."
+            self.assertFalse(use_web)
+            yield "Current facts are unavailable offline."
 
         with mock.patch.object(server.services, "retrieve", return_value=[]), \
                 mock.patch.object(server.services, "answer_stream", side_effect=fake_stream):
@@ -122,11 +117,8 @@ class ServerTests(unittest.TestCase):
                 "use_web": True,
             })
 
-        self.assertIn('"type": "sources"', response.text)
-        self.assertIn("https://pgf.ng/profile", response.text)
-        self.assertIn('"grounded": true', response.text)
-        self.assertIn('"web_used": true', response.text)
-        self.assertIn('"notes_used": false', response.text)
+        self.assertNotIn('"type": "sources"', response.text)
+        self.assertIn('"web_used": false', response.text)
 
     def test_chat_hides_sources_when_notes_do_not_cover_the_question(self):
         passage = {"path": "/tmp/newtons_laws.txt", "label": "part 1",

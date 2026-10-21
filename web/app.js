@@ -1,6 +1,7 @@
 "use strict";
 
 const $ = (id) => document.getElementById(id);
+const LIVE_LOOKUP_ENABLED = false;
 
 const el = {
   sidebar: $("sidebar"),
@@ -689,7 +690,7 @@ async function sendMessage(preset) {
       mode: el.mode.value || "Just chat",
       language: el.language.value || "English",
       use_notes: el.notesToggle.getAttribute("aria-pressed") === "true",
-      use_web: el.webToggle.getAttribute("aria-pressed") === "true",
+      use_web: LIVE_LOOKUP_ENABLED && el.webToggle.getAttribute("aria-pressed") === "true",
       model: el.model.value || null,
     };
 

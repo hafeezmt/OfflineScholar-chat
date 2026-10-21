@@ -381,9 +381,9 @@ def answer_stream(history, message, mode, language, use_notes, model, passages=N
         yield ("Your notes do not cover that. I can only answer that from your notes, "
                "so I will not guess. Add a source or ask a general question.")
         return
-    if not notes_question and not passages and is_time_sensitive(message):
+    if not notes_question and is_time_sensitive(message):
         yield ("I cannot verify current or time-sensitive information while offline. "
-               "Turn on Live lookup while online, or check an official source.")
+               "Check an official source instead.")
         return
     if passages and notes_question and not notes_cover(message, passages[0]):
         yield "Your notes do not cover that."
