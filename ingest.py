@@ -82,6 +82,7 @@ def scan_library(con, embed_fn=None, folder=None):
         try:
             sections = read_sections(p)
         except Exception as e:
+            store.remove_file(con, str(p))
             notes.append(f"Could not read {p.name}: {e}")
             continue
         pieces = []
@@ -89,6 +90,7 @@ def scan_library(con, embed_fn=None, folder=None):
             for c in chunk_words(text):
                 pieces.append((label, c))
         if not pieces:
+            store.remove_file(con, str(p))
             notes.append(f"{p.name} has no readable text (scanned PDF?)")
             continue
         vectors = [None] * len(pieces)

@@ -99,6 +99,14 @@ class IngestTests(unittest.TestCase):
         self.assertEqual(store.get_meta(self.con, "embed_model"), "model-b")
         self.assertTrue(store.semantic_search(self.con, [0.0, 1.0, 0.0, 0.0], 3))
 
+    def test_unreadable_file_is_not_left_indexed(self):
+        bad = self.library / "broken.docx"
+        bad.write_bytes(b"not a zip file")
+        message = ingest.scan_library(self.con, folder=self.library)
+        self.assertIn("Could not read broken.docx", message)
+        self.assertEqual(
+            self.con.execute("SELECT count(*) FROM chunks WHERE path=?", (str(bad),)).fetchone()[0], 0)
+
     def test_failed_embeddings_leave_model_unrecorded(self):
         config.EMBED_MODEL = "model-c"
         message = ingest.scan_library(
