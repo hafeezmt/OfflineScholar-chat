@@ -245,8 +245,9 @@ win over the file.
 - Normal chat that remembers the conversation, with streaming replies
 - Study modes: just chat, explain simply, homework helper, essay outline, quiz me, summarize my text
 - Replies in English, Nigerian Pidgin or Hausa
-- Grounded notes answers: add .pdf, .docx, .txt, .md files or saved web pages, switch on "Use notes", and relevant passages are quoted with `[1]` citations; unrelated notes are rejected instead of being forced into every answer
-- Honest limits: if the notes do not cover a question, the app says so; current or time-sensitive questions such as "latest version" are refused offline instead of guessed
+- Grounded notes answers: add .pdf, .docx, .txt, .md files or saved web pages, switch on "Use notes", and relevant passages are quoted with `[1]` citations; unrelated notes are ignored
+- Answers anything: when the notes do not cover a question, the app says so and answers from general knowledge; current or time-sensitive questions get a best-effort answer with an offline caveat
+- Latest-upload summaries and notes quizzes read the newest file, even when the question has no exact keywords
 - Notes library drawer with each file's size and index state, plus re-scan and clear
 - Conversation history in a sidebar: search, rename or delete chats, and reopen them later
 - Model picker, plus automatic low-RAM mode so the laptop stays responsive
@@ -258,9 +259,10 @@ win over the file.
 
 1. The question is matched against paragraph-sized note chunks. Weak or unrelated matches are dropped.
 2. If the best passage contains the question's key terms, its answer sentences are quoted directly with a `[1]` citation. This is instant and cannot be hallucinated.
-3. If the notes do not contain the answer, the app replies "Your notes do not cover that" instead of guessing.
-4. "Latest/current" questions are refused instead of guessed; known false premises such as "Newton's fourth law" are corrected.
-5. General questions still use the local chat model with a short prompt and no notes.
+3. If the notes do not contain the answer, the app briefly says it could not find it there, then answers from general knowledge without citations.
+4. "Latest/current" questions get the best available offline answer with a caveat that it may be out of date; known false premises such as "Newton's fourth law" are corrected.
+5. General questions use the local chat model directly, and notes are only included when they are relevant.
+6. "Summarise my latest upload" and notes overview requests such as "quiz me on my notes" read the most recent file.
 
 Set `OS_EXTRACTIVE_RAG=0` to always let the model write the answer from notes (slower, and small models may forget citations).
 
@@ -283,9 +285,9 @@ python -m unittest test_features test_server test_rag test_manage  # API, chunki
 python eval_quality.py --models gemma3:1b qwen2.5:1.5b --verbose
 ```
 
-`eval_quality.py` runs real questions through Ollama and checks citations, refusal behaviour,
-notes coverage, false premises and time-sensitive answers. It exits non-zero on failure, so it
-can be used before a release.
+`eval_quality.py` runs real questions through Ollama and checks citations, general-answer
+fallback, notes coverage, false premises and caveated time-sensitive answers. It exits
+non-zero on failure, so it can be used before a release.
 
 ## Troubleshooting
 

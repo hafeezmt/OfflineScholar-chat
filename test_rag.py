@@ -113,12 +113,14 @@ class PromptTests(unittest.TestCase):
         self.assertIn("[1] photosynthesis.txt", prompt)
         self.assertIn("cite", prompt.lower())
         self.assertIn("notes do not cover", prompt.lower())
+        self.assertIn("already provided", prompt)
+        self.assertIn("Never claim you cannot access", prompt)
         self.assertIn("Never invent", prompt)
 
     def test_empty_retrieval_does_not_pretend_notes_were_used(self):
         prompt = llm.build_system(passages=[])
-        self.assertIn("No relevant passages", prompt)
-        self.assertIn("do not pretend to cite", prompt)
+        self.assertIn("Answer from general knowledge", prompt)
+        self.assertIn("according to your notes", prompt)
 
     def test_notes_off_says_they_were_not_searched(self):
         prompt = llm.build_system(passages=None)
@@ -149,6 +151,61 @@ class PromptTests(unittest.TestCase):
         self.assertIn("F = m x a", answer)
         self.assertIn("[1]", answer)
 
+    def test_latest_upload_summary_reads_the_newest_file(self):
+        latest = [passage(1, "MTH 102 covers algebra and calculus.", score=1.0)]
+        with mock.patch.object(services, "latest_upload_passages", return_value=latest), \
+                mock.patch.object(llm, "chat_stream",
+                                  return_value=iter(["- Algebra\n- Calculus"])) as chat:
+            answer = "".join(services.answer_stream(
+                [], "Summarise my latest upload in 5 bullet points.", "Just chat", "English",
+                True, "gemma3:1b", passages=None))
+        self.assertIn("Algebra", answer)
+        self.assertEqual(chat.call_args.args[4], latest)
+
+    def test_notes_overview_uses_the_latest_file_even_without_key_terms(self):
+        latest = [passage(1, "Newton's laws describe motion.", score=1.0)]
+        with mock.patch.object(services, "latest_upload_passages", return_value=latest), \
+                mock.patch.object(llm, "chat_stream",
+                                  return_value=iter(["1. What is inertia?"])) as chat:
+            answer = "".join(services.answer_stream(
+                [], "Quiz me on my notes, 5 questions.", "Just chat", "English",
+                True, "gemma3:1b", passages=None))
+        self.assertIn("What is inertia", answer)
+        self.assertEqual(chat.call_args.args[4], latest)
+
+    def test_quiz_overview_always_uses_the_model(self):
+        latest = [passage(1, "Quiz questions about motion and 5 laws.", score=1.0)]
+        with mock.patch.object(services, "latest_upload_passages", return_value=latest), \
+                mock.patch.object(llm, "chat_stream",
+                                  return_value=iter(["1. What is inertia?"])) as chat:
+            answer = "".join(services.answer_stream(
+                [], "Quiz me on my notes, 5 questions.", "Just chat", "English",
+                True, "gemma3:1b", passages=None))
+        self.assertIn("What is inertia", answer)
+        chat.assert_called_once()
+
+    def test_latest_upload_without_files_says_to_upload_one(self):
+        with mock.patch.object(services, "latest_upload_passages", return_value=[]):
+            answer = "".join(services.answer_stream(
+                [], "Summarise my latest upload.", "Just chat", "English", True,
+                "gemma3:1b", passages=None))
+        self.assertIn("have not uploaded", answer)
+
+    def test_latest_upload_works_with_notes_off(self):
+        latest = [passage(1, "MTH 102 covers algebra and calculus.", score=1.0)]
+        with mock.patch.object(services, "latest_upload_passages", return_value=latest), \
+                mock.patch.object(llm, "chat_stream",
+                                  return_value=iter(["- Algebra\n- Calculus"])) as chat:
+            answer = "".join(services.answer_stream(
+                [], "Summarise my latest upload.", "Just chat", "English", False,
+                "gemma3:1b", passages=None))
+        self.assertIn("Algebra", answer)
+        self.assertEqual(chat.call_args.args[4], latest)
+
+    def test_explain_a_specific_note_topic_does_not_use_the_overview_path(self):
+        self.assertFalse(services.wants_notes_overview("Explain photosynthesis in my notes."))
+        self.assertTrue(services.wants_notes_overview("Explain the hardest idea in my notes."))
+
     def test_why_answer_keeps_the_inertia_context(self):
         text = ("First law (inertia): an object keeps moving unless a force acts on it. "
                 "This is why passengers lurch forward when a bus brakes suddenly.")
@@ -159,27 +216,34 @@ class PromptTests(unittest.TestCase):
         self.assertIn("inertia", answer)
         self.assertIn("lurch forward", answer)
 
-    def test_missing_key_term_returns_a_notes_gap(self):
+    def test_missing_key_term_falls_back_to_a_general_answer(self):
         notes = [passage(1, "Third law: action and reaction.", score=0.7)]
-        answer = "".join(services.answer_stream(
-            [], "What does my note say about the fourth law of motion?", "Just chat", "English",
-            True, "gemma3:1b", passages=notes))
-        self.assertEqual(answer, "Your notes do not cover that.")
+        with mock.patch.object(llm, "chat_stream", return_value=iter(["Einstein was a physicist."])) as chat:
+            answer = "".join(services.answer_stream(
+                [], "What does my note say about Einstein?", "Just chat", "English",
+                True, "gemma3:1b", passages=notes))
+        self.assertIn("could not find that in your notes", answer)
+        self.assertIn("Here is a general answer", answer)
+        self.assertIn("Einstein was a physicist", answer)
+        self.assertEqual(chat.call_args.args[4], [])
 
-    def test_time_sensitive_question_is_refused_without_notes(self):
-        answer = "".join(services.answer_stream(
-            [], "What is the latest version of Python?", "Just chat", "English", True,
-            "gemma3:1b", passages=[]))
-        self.assertIn("cannot verify current", answer)
-        self.assertNotIn("3.12", answer)
+    def test_time_sensitive_question_gets_a_caveated_answer(self):
+        with mock.patch.object(llm, "chat_stream",
+                               return_value=iter(["Python 3.14 is the latest release."])) as chat:
+            answer = "".join(services.answer_stream(
+                [], "What is the latest version of Python?", "Just chat", "English", True,
+                "gemma3:1b", passages=[]))
+        self.assertIn("cannot check live information", answer)
+        self.assertIn("Python 3.14", answer)
+        chat.assert_called_once()
 
-    def test_time_sensitive_question_is_refused_even_when_notes_match(self):
+    def test_time_sensitive_question_is_not_refused_when_notes_match(self):
         notes = [passage(1, "Gombe State University is in Gombe State.", score=0.08)]
         answer = "".join(services.answer_stream(
             [], "Who is the current governor of Gombe State?", "Just chat", "English",
             True, "gemma3:1b", passages=notes))
-        self.assertIn("cannot verify current", answer)
-        self.assertNotIn("EXCELLENCE", answer)
+        self.assertIn("cannot check live information", answer)
+        self.assertNotIn("cannot verify current", answer)
 
     def test_prompt_injection_is_refused_before_the_model(self):
         with mock.patch.object(llm, "chat_stream") as chat:

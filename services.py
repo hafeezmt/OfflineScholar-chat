@@ -104,10 +104,50 @@ def clear_notes_index():
     return "Index cleared. Your files are still in the library; re-scan to rebuild it."
 
 
+def latest_upload_passages(limit=4):
+    """Passages from the most recently changed file in the notes library."""
+    files = ingest.library_files()
+    if not files:
+        return []
+    try:
+        latest = max(files, key=lambda path: path.stat().st_mtime)
+    except OSError:
+        latest = files[-1]
+    con = store.connect()
+    try:
+        rows = con.execute(
+            "SELECT path,label,text FROM chunks WHERE path=? ORDER BY id LIMIT ?",
+            (str(latest), limit),
+        ).fetchall()
+    finally:
+        con.close()
+    if not rows:
+        try:
+            sections = ingest.read_sections(latest)
+        except Exception:
+            return []
+        rows = []
+        for label, text in sections:
+            for chunk in ingest.chunk_text(text):
+                rows.append((str(latest), label, chunk))
+                if len(rows) >= limit:
+                    break
+            if len(rows) >= limit:
+                break
+    return [{"path": path, "label": label, "text": text, "score": 1.0}
+            for path, label, text in rows]
+
+
 def retrieve(message, use_notes=True):
     """Find supporting note passages. None means notes were not searched; [] means none matched."""
     if not use_notes:
         return None
+    if is_latest_upload(message):
+        return latest_upload_passages()
+    if wants_notes_overview(message):
+        overview = latest_upload_passages()
+        if overview:
+            return overview
     try:
         passages = search.find(message)[:config.RAG_MAX_PASSAGES]
         terms = _content_terms(message)
@@ -129,6 +169,12 @@ NOTES_QUESTION = re.compile(
     r"|\baccording to (?:my|the) notes?\b|\bin my (?:notes?|library)\b", re.I)
 INJECTION = re.compile(
     r"\b(?:ignore|disregard|forget|override) (?:your|the|all) (?:rules|instructions|prompt)\b", re.I)
+LATEST_UPLOAD = re.compile(
+    r"\b(?:latest|most recent|newest|last)\s+(?:upload|uploaded file|file|document|note)\b",
+    re.I)
+NOTES_OVERVIEW = re.compile(
+    r"\b(?:quiz|summari[sz]e|summary|overview|main idea|key idea|key points|hardest"
+    r"|most important|what are my notes about)\b", re.I)
 META_TERMS = {
     "note", "notes", "say", "says", "said", "mention", "mentions", "cover", "covers",
     "according", "tell", "explain", "simple", "simply", "terms", "please", "give",
@@ -156,7 +202,17 @@ def is_notes_question(message):
     return bool(NOTES_QUESTION.search(message or ""))
 
 
+def is_latest_upload(message):
+    return bool(LATEST_UPLOAD.search(message or ""))
+
+
+def wants_notes_overview(message):
+    return is_notes_question(message) and bool(NOTES_OVERVIEW.search(message or ""))
+
+
 def is_time_sensitive(message):
+    if is_latest_upload(message):
+        return False
     return bool(TIME_SENSITIVE.search(message or "") or OFFICE_OF.search(message or ""))
 
 
@@ -355,50 +411,63 @@ def _web_answer_stream(history, message, mode, language, model, web_sink=None):
 
 def answer_stream(history, message, mode, language, use_notes, model, passages=None,
                   use_web=False, web_sink=None):
-    """Yield answer tokens, using notes or an optional live web lookup."""
+    """Yield answer tokens, using notes when they help but never refusing a general question."""
     notes_question = is_notes_question(message)
+    latest_upload = is_latest_upload(message)
     if use_web and not notes_question and is_time_sensitive(message):
         yield from _web_answer_stream(history, message, mode, language, model, web_sink)
         return
-    if use_notes and passages is None:
+    if latest_upload and passages is None:
         passages = retrieve(message, use_notes=True)
-    if not use_notes:
+    elif use_notes and passages is None:
+        passages = retrieve(message, use_notes=True)
+    if not use_notes and not latest_upload:
         passages = None
 
     if INJECTION.search(message or ""):
         yield "I cannot ignore my accuracy rules, even when asked to. Ask a normal question instead."
         return
-    if not notes_question and re.search(r"\b(?:fourth|4th|fifth|5th) law(?: of motion)?\b",
-                                        message, re.I):
+    if re.search(r"\b(?:fourth|4th|fifth|5th) law(?: of motion)?\b", message, re.I):
         yield ("Newton's laws of motion are three: inertia, F = m x a, and action-reaction. "
                "There is no fourth law.")
         return
+    if latest_upload and not passages:
+        yield ("You have not uploaded any notes yet. Add a PDF, DOCX, TXT, or Markdown file, "
+               "then ask again.")
+        return
+
+    intro = ""
+    answer_passages = passages
     if notes_question and passages is None:
-        yield ("Your notes were not searched because \"Use notes\" is off. "
-               "Turn it on and ask again.")
-        return
-    if notes_question and passages == []:
-        yield ("Your notes do not cover that. I can only answer that from your notes, "
-               "so I will not guess. Add a source or ask a general question.")
-        return
+        intro = 'Use notes is off, so I could not search your library. Here is a general answer.\n\n'
+        answer_passages = None
+    elif notes_question and not passages:
+        intro = "I could not find that in your notes. Here is a general answer.\n\n"
+        answer_passages = []
+    elif (notes_question and passages and not wants_notes_overview(message)
+          and not notes_cover(message, passages[0])):
+        intro = "I could not find that in your notes. Here is a general answer.\n\n"
+        answer_passages = []
+
     if not notes_question and is_time_sensitive(message):
-        yield ("I cannot verify current or time-sensitive information while offline. "
-               "Check an official source instead.")
-        return
-    if passages and notes_question and not notes_cover(message, passages[0]):
-        yield "Your notes do not cover that."
-        return
-    if passages and config.EXTRACTIVE_RAG and mode in ("Just chat", "Explain simply"):
-        extracted = extract_answer(message, passages)
+        intro = "I cannot check live information while offline, so this may be out of date.\n\n"
+    elif notes_question and is_time_sensitive(message):
+        intro += "I also cannot check live information offline, so this may be out of date.\n\n"
+
+    if intro:
+        yield intro
+    if (answer_passages and config.EXTRACTIVE_RAG and not latest_upload
+            and not wants_notes_overview(message) and mode in ("Just chat", "Explain simply")):
+        extracted = extract_answer(message, answer_passages)
         if extracted:
             yield extracted
             return
 
     parts = []
-    for token in llm.chat_stream(history, message, mode, language, passages, model=model):
+    for token in llm.chat_stream(history, message, mode, language, answer_passages, model=model):
         parts.append(token)
         yield token
-    suffix = source_suffix("".join(parts), passages)
+    suffix = source_suffix("".join(parts), answer_passages)
     if suffix:
         yield suffix
 
