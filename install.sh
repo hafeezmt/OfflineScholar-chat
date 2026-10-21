@@ -74,7 +74,11 @@ ensure_base_tools() {
       install_system_packages "${apt_missing[@]}"
     elif [ "$(uname -s)" = "Darwin" ] && have brew; then
       for item in "${missing[@]}"; do
-        [ "$item" = "python3" ] && brew install python || brew install "$item"
+        if [ "$item" = "python3" ]; then
+          brew install python
+        else
+          brew install "$item"
+        fi
       done
     else
       install_system_packages "${missing[@]}"
@@ -107,7 +111,8 @@ install_code() {
   mkdir -p "$INSTALL_DIR"
   if [ -d "$INSTALL_DIR/.git" ] && have git; then
     info "Updating OfflineScholar in $INSTALL_DIR"
-    git -C "$INSTALL_DIR" pull --ff-only
+    git -C "$INSTALL_DIR" fetch --depth 1 "$REPO_URL" main
+    git -C "$INSTALL_DIR" reset --hard FETCH_HEAD
     return
   fi
   if [ -f "$INSTALL_DIR/app.py" ]; then
@@ -195,6 +200,17 @@ START_EOF
   chmod +x "$INSTALL_DIR/start.sh"
 }
 
+start_direct() {
+  if [ -f "$INSTALL_DIR/server.pid" ]; then
+    kill "$(cat "$INSTALL_DIR/server.pid")" >/dev/null 2>&1 || true
+  fi
+  info "Starting OfflineScholar in the background"
+  nohup env OS_LOW_MEMORY=1 OS_MODEL="$CHAT_MODEL" OS_PORT="$PORT" \
+    "$INSTALL_DIR/venv/bin/python" "$INSTALL_DIR/app.py" \
+    > "$INSTALL_DIR/server.log" 2>&1 &
+  echo "$!" > "$INSTALL_DIR/server.pid"
+}
+
 start_app() {
   if [ "$NO_START" = "1" ]; then
     info "Skipping app startup because OS_NO_START=1"
@@ -210,7 +226,7 @@ After=network.target
 
 [Service]
 Type=simple
-WorkingDirectory="$INSTALL_DIR"
+WorkingDirectory=$INSTALL_DIR
 ExecStart="$INSTALL_DIR/venv/bin/python" "$INSTALL_DIR/app.py"
 Environment=OS_LOW_MEMORY=1
 Environment=OS_MODEL=$CHAT_MODEL
@@ -221,18 +237,19 @@ RestartSec=3
 [Install]
 WantedBy=default.target
 SERVICE_EOF
-    systemctl --user daemon-reload
-    systemctl --user enable --now offlinescholar
-    systemctl --user restart offlinescholar
-  else
-    if [ -f "$INSTALL_DIR/server.pid" ]; then
-      kill "$(cat "$INSTALL_DIR/server.pid")" >/dev/null 2>&1 || true
+    if systemctl --user daemon-reload \
+      && systemctl --user enable offlinescholar >/dev/null \
+      && systemctl --user restart offlinescholar; then
+      :
+    else
+      info "The systemd service failed; starting OfflineScholar directly instead"
+      systemctl --user disable offlinescholar >/dev/null 2>&1 || true
+      rm -f "$service_dir/offlinescholar.service"
+      systemctl --user daemon-reload >/dev/null 2>&1 || true
+      start_direct
     fi
-    info "Starting OfflineScholar in the background"
-    nohup env OS_LOW_MEMORY=1 OS_MODEL="$CHAT_MODEL" OS_PORT="$PORT" \
-      "$INSTALL_DIR/venv/bin/python" "$INSTALL_DIR/app.py" \
-      > "$INSTALL_DIR/server.log" 2>&1 &
-    echo "$!" > "$INSTALL_DIR/server.pid"
+  else
+    start_direct
   fi
 
   info "Waiting for OfflineScholar"
