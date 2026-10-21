@@ -29,6 +29,40 @@ THEME = gr.themes.Soft(
     secondary_hue="teal",
     neutral_hue="slate",
     font=["ui-sans-serif", "system-ui", "-apple-system", "Segoe UI", "Roboto", "sans-serif"],
+).set(
+    body_background_fill="#f6faf8",
+    body_background_fill_dark="#0a1220",
+    body_text_color="#0f172a",
+    body_text_color_dark="#e6eef8",
+    body_text_color_subdued="#5b6b7b",
+    body_text_color_subdued_dark="#94a3b8",
+    block_background_fill="#ffffff",
+    block_background_fill_dark="#111c2e",
+    block_border_color="#e1ebe6",
+    block_border_color_dark="#1f2f46",
+    block_border_width="1px",
+    block_radius="18px",
+    container_radius="20px",
+    input_radius="12px",
+    input_border_color="#d6e3dd",
+    input_border_color_dark="#263850",
+    button_large_radius="12px",
+    button_small_radius="10px",
+    button_primary_background_fill="#059669",
+    button_primary_background_fill_hover="#047857",
+    button_primary_background_fill_dark="#059669",
+    button_primary_background_fill_hover_dark="#10b981",
+    button_primary_text_color="#ffffff",
+    button_secondary_background_fill="#ffffff",
+    button_secondary_background_fill_dark="#16233a",
+    button_secondary_text_color="#0f172a",
+    button_secondary_text_color_dark="#e6eef8",
+    block_label_text_color="#64748b",
+    block_label_text_color_dark="#94a3b8",
+    block_title_text_color="#0f172a",
+    block_title_text_color_dark="#e6eef8",
+    shadow_drop="0 10px 30px -24px rgba(15, 23, 42, 0.45)",
+    layout_gap="14px",
 )
 
 # Gradio 6 moved theme and css from Blocks() to launch().
@@ -44,19 +78,38 @@ DEFAULT_MODEL = llm.default_model(MODELS)
 if not MODELS:
     MODELS = [DEFAULT_MODEL]
 
-LOW_RAM_CHIP = '<span class="chip">Low-RAM mode</span>' if config.LOW_MEMORY else ""
+LOW_RAM_CHIP = '<span class="chip chip-lite">Low-RAM</span>' if config.LOW_MEMORY else ""
+
+LOGO = """
+<svg class="logo" viewBox="0 0 48 48" width="48" height="48" aria-hidden="true">
+  <rect x="1" y="1" width="46" height="46" rx="14" fill="rgba(255,255,255,.16)"
+        stroke="rgba(255,255,255,.42)"/>
+  <path d="M13 15h10a5 5 0 0 1 5 5v14a4 4 0 0 0-4-4H13z" fill="#ecfeff" opacity=".95"/>
+  <path d="M35 15H25a5 5 0 0 0-5 5v14a4 4 0 0 1 4-4h11z" fill="#a7f3d0" opacity=".9"/>
+  <circle cx="34" cy="34" r="3.2" fill="#34d399"/>
+</svg>
+"""
 
 HEADER = f"""
 <div class="hero">
-  <span class="eyebrow">Private &middot; Offline &middot; Free</span>
-  <h1>OfflineScholar</h1>
-  <p>Your study tutor that runs entirely on this laptop. Ask questions, work through homework,
-  practise quizzes and search your own notes &mdash; no internet required.</p>
-  <div class="chips">
-    <span class="chip">Chat model: <code>{DEFAULT_MODEL}</code></span>
-    <span class="chip">Notes search: <code>{config.EMBED_MODEL}</code></span>
+  <div class="brand">
+    {LOGO}
+    <div class="brand-text">
+      <span class="eyebrow">Private &middot; Offline &middot; Free</span>
+      <h1>OfflineScholar</h1>
+      <p>Your private study tutor for homework, revision and notes &mdash; no internet needed.</p>
+    </div>
+  </div>
+  <div class="hero-meta">
+    <span class="chip"><span class="dot"></span>Offline</span>
+    <span class="chip">Model: <code>{DEFAULT_MODEL}</code></span>
     {LOW_RAM_CHIP}
   </div>
+</div>
+<div class="quick-help" role="list">
+  <div class="step" role="listitem"><span>1</span><p><b>Ask</b> any study question</p></div>
+  <div class="step" role="listitem"><span>2</span><p><b>Pick</b> a study mode under Study settings</p></div>
+  <div class="step" role="listitem"><span>3</span><p><b>Add notes</b> to answer from your own material</p></div>
 </div>
 """
 
@@ -240,17 +293,31 @@ with gr.Blocks(**BLOCKS_KWARGS) as demo:
             ],
             save_history=True,
         )
-    with gr.Tab("My notes (optional)"):
-        gr.Markdown("Add your notes, PDFs or saved pages. Tick **Also search my notes** in the Chat tab "
-                    "and the AI will use them. Search uses Snowflake Arctic Embed, locally.")
-        files_md = gr.Markdown(library_list())
-        upload = gr.File(label="Add notes (.pdf, .docx, .txt, .md)", file_count="multiple")
-        add_btn = gr.Button("Add files")
-        scan_btn = gr.Button("Re-scan library")
-        clear_btn = gr.Button("Clear index (keeps files)")
-        url = gr.Textbox(label="Save a web page for offline (needs internet once)", placeholder="https://...")
-        save_btn = gr.Button("Save page")
-        status = gr.Markdown()
+    with gr.Tab("My notes"):
+        gr.Markdown("Add your own material so answers can cite your files. Everything is indexed "
+                    "on this laptop and stays here.")
+        with gr.Row(elem_classes="notes-grid"):
+            with gr.Column(scale=2, elem_classes="card"):
+                gr.Markdown("### Add material")
+                upload = gr.File(
+                    label="Drop PDF, Word, text or Markdown files here",
+                    file_count="multiple",
+                    file_types=[".pdf", ".docx", ".txt", ".md"],
+                    elem_classes="dropzone",
+                )
+                add_btn = gr.Button("Add to library", variant="primary")
+                gr.Markdown("### Save a web page")
+                url = gr.Textbox(label="Page address", placeholder="https://example.com/article")
+                save_btn = gr.Button("Save page", variant="secondary")
+                status = gr.Markdown(elem_classes="status")
+            with gr.Column(scale=3, elem_classes="card"):
+                gr.Markdown("### Your library")
+                files_md = gr.Markdown(library_list(), elem_classes="library-list")
+                with gr.Row(elem_classes="notes-actions"):
+                    scan_btn = gr.Button("Re-scan library", size="sm")
+                    clear_btn = gr.Button("Clear index", size="sm", variant="stop")
+                gr.Markdown("Clearing the index keeps your files; re-scan to rebuild it.",
+                            elem_classes="hint")
         add_btn.click(add_files, upload, status).then(library_list, None, files_md)
         scan_btn.click(rescan, None, status).then(library_list, None, files_md)
         clear_btn.click(clear_index, None, status)
