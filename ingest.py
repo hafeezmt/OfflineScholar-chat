@@ -50,6 +50,58 @@ def chunk_words(text, size=None, overlap=None):
     return chunks
 
 
+def chunk_text(text, size=None, overlap=None):
+    """Chunk by paragraphs first so a note stays with its context.
+
+    Short paragraphs are packed together up to `size` words. A single oversized
+    paragraph (or a PDF page with no blank lines) falls back to word windows.
+    """
+    size = max(1, size or config.CHUNK_WORDS)
+    paragraphs = [p.strip() for p in re.split(r"\n\s*\n+", text or "") if p.strip()]
+    if not paragraphs:
+        return []
+    if len(paragraphs) == 1:
+        return chunk_words(paragraphs[0], size=size, overlap=overlap)
+
+    chunks = []
+    current = []
+    min_paragraph = min(35, size)
+    for paragraph in paragraphs:
+        words = paragraph.split()
+        if len(words) >= min_paragraph:
+            if current and len(current) + len(words) <= size:
+                current.extend(words)
+                chunks.append(" ".join(current))
+                current = []
+            elif current:
+                chunks.append(" ".join(current))
+                current = []
+                if len(words) <= size:
+                    chunks.append(paragraph)
+                else:
+                    chunks.extend(chunk_words(paragraph, size=size, overlap=overlap))
+            elif len(words) <= size:
+                chunks.append(paragraph)
+            else:
+                chunks.extend(chunk_words(paragraph, size=size, overlap=overlap))
+            continue
+        if current and len(current) + len(words) > size:
+            chunks.append(" ".join(current))
+            current = []
+        current.extend(words)
+    if current:
+        chunks.append(" ".join(current))
+    return chunks
+
+
+def index_signature(embed_fn=None):
+    return "chunks-v5|{}|{}|{}".format(
+        config.CHUNK_WORDS,
+        config.CHUNK_OVERLAP,
+        config.EMBED_MODEL if embed_fn is not None else "keyword",
+    )
+
+
 def library_files(folder=None):
     folder = Path(folder or config.LIBRARY_DIR)
     return sorted(p for p in folder.rglob("*") if p.is_file() and p.suffix.lower() in config.SUPPORTED)
@@ -60,6 +112,15 @@ def scan_library(con, embed_fn=None, folder=None):
     notes, added, skipped = [], 0, 0
     files = library_files(folder)
     on_disk = {str(p) for p in files}
+
+    signature = index_signature(embed_fn)
+    if store.get_meta(con, "index_signature") != signature:
+        had_index = con.execute("SELECT 1 FROM files LIMIT 1").fetchone() is not None
+        store.clear_index(con)
+        store.set_meta(con, "index_signature", signature)
+        con.commit()
+        if had_index:
+            notes.append("Rebuilt the note index with the improved chunking.")
 
     for (path,) in con.execute("SELECT path FROM files").fetchall():
         if path not in on_disk:
@@ -87,8 +148,10 @@ def scan_library(con, embed_fn=None, folder=None):
             continue
         pieces = []
         for label, text in sections:
-            for c in chunk_words(text):
-                pieces.append((label, c))
+            chunks = chunk_text(text)
+            for number, c in enumerate(chunks, start=1):
+                part = label if len(chunks) == 1 else f"{label} (part {number})"
+                pieces.append((part, c))
         if not pieces:
             store.remove_file(con, str(p))
             notes.append(f"{p.name} has no readable text (scanned PDF?)")

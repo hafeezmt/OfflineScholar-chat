@@ -17,6 +17,7 @@ const el = {
   language: $("language"),
   model: $("model"),
   notesToggle: $("notesToggle"),
+  webToggle: $("webToggle"),
   chatTitle: $("chatTitle"),
   chatSub: $("chatSub"),
   status: $("status"),
@@ -70,8 +71,9 @@ const state = {
     theme: memory.get("os.theme", null),
     mode: memory.get("os.mode", "Just chat"),
     language: memory.get("os.language", "English"),
-    model: memory.get("os.model", ""),
-    useNotes: memory.get("os.useNotes", false),
+    model: memory.get("os.model2", ""),
+    useNotes: memory.get("os.useNotes2", true),
+    useWeb: memory.get("os.useWeb", false),
   },
 };
 
@@ -359,7 +361,7 @@ async function loadStatus() {
 
     const models = Array.from(new Set([...(status.models || []), status.model].filter(Boolean)));
     state.prefs.model = fillSelect(el.model, models, state.prefs.model || status.model);
-    memory.set("os.model", state.prefs.model);
+    memory.set("os.model2", state.prefs.model);
 
     el.memoryNote.hidden = !status.low_memory;
     if (status.low_memory) {
@@ -507,6 +509,32 @@ function appendMessage(role, content) {
   return bubble;
 }
 
+function attachSources(bubble, sources) {
+  if (!sources || !sources.length) return;
+  const wrap = document.createElement("div");
+  wrap.className = "sources";
+  const label = document.createElement("span");
+  label.className = "sources-label";
+  label.textContent = "Sources";
+  wrap.append(label);
+  sources.forEach((source, index) => {
+    const chip = document.createElement(source.url ? "a" : "span");
+    chip.className = "source-chip";
+    if (source.url) {
+      chip.href = source.url;
+      chip.target = "_blank";
+      chip.rel = "noopener noreferrer";
+    }
+    const label = source.label ? " \u00b7 " + source.label : "";
+    chip.textContent = "[" + (index + 1) + "] " + source.name + label;
+    if (typeof source.score === "number") {
+      chip.title = "Relevance " + Math.round(source.score * 100) + "%";
+    }
+    wrap.append(chip);
+  });
+  bubble.append(wrap);
+}
+
 function appendTyping() {
   const row = document.createElement("div");
   row.className = "msg assistant";
@@ -619,6 +647,7 @@ async function sendMessage(preset) {
 
   const bubble = appendTyping();
   let answer = "";
+  let sources = [];
   let sawToken = false;
   let failed = false;
 
@@ -632,6 +661,10 @@ async function sendMessage(preset) {
       state.activeId = event.conversation_id;
       memory.set("os.active", state.activeId);
       loadConversations().then(syncTitleFromList);
+      return;
+    }
+    if (event.type === "sources") {
+      sources = event.sources || [];
       return;
     }
     if (event.type === "token") {
@@ -656,6 +689,7 @@ async function sendMessage(preset) {
       mode: el.mode.value || "Just chat",
       language: el.language.value || "English",
       use_notes: el.notesToggle.getAttribute("aria-pressed") === "true",
+      use_web: el.webToggle.getAttribute("aria-pressed") === "true",
       model: el.model.value || null,
     };
 
@@ -711,6 +745,7 @@ async function sendMessage(preset) {
     if (answer.trim()) {
       bubble.innerHTML = renderMarkdown(answer);
       if (!sawToken && failed) bubble.innerHTML = renderMarkdown(answer);
+      attachSources(bubble, sources);
       state.messages.push({ role: "assistant", content: answer });
     } else {
       const row = bubble.parentElement;
@@ -968,7 +1003,7 @@ function wireEvents() {
   });
   el.model.addEventListener("change", () => {
     state.prefs.model = el.model.value;
-    memory.set("os.model", el.model.value);
+    memory.set("os.model2", el.model.value);
     updateSubtitle();
   });
 
@@ -978,9 +1013,22 @@ function wireEvents() {
   syncNotesToggle();
   el.notesToggle.addEventListener("click", () => {
     state.prefs.useNotes = !state.prefs.useNotes;
-    memory.set("os.useNotes", state.prefs.useNotes);
+    memory.set("os.useNotes2", state.prefs.useNotes);
     syncNotesToggle();
     toast(state.prefs.useNotes ? "Replies will search your notes" : "Notes search is off");
+  });
+
+  const syncWebToggle = () => {
+    el.webToggle.setAttribute("aria-pressed", state.prefs.useWeb ? "true" : "false");
+  };
+  syncWebToggle();
+  el.webToggle.addEventListener("click", () => {
+    state.prefs.useWeb = !state.prefs.useWeb;
+    memory.set("os.useWeb", state.prefs.useWeb);
+    syncWebToggle();
+    toast(state.prefs.useWeb
+      ? "Live lookup is on for current questions. Your question is sent to a search engine."
+      : "Live lookup is off");
   });
 
   el.fileInput.addEventListener("change", () => uploadFiles(el.fileInput.files));

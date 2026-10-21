@@ -58,7 +58,7 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(self.client.get(f"/api/conversations/{conversation_id}").status_code, 404)
 
     def test_chat_streams_and_saves_messages(self):
-        def fake_stream(history, message, mode, language, use_notes, model):
+        def fake_stream(history, message, mode, language, use_notes, model, passages=None, use_web=False, web_sink=None):
             self.assertEqual(message, "What is chlorophyll?")
             self.assertEqual(model, "gemma3:1b")
             yield "Chlorophyll "
@@ -87,6 +87,60 @@ class ServerTests(unittest.TestCase):
             con.close()
         self.assertEqual([m["role"] for m in messages], ["user", "assistant"])
         self.assertEqual(messages[1]["content"], "Chlorophyll absorbs light.")
+
+    def test_chat_reports_sources_and_verifies_citations(self):
+        passage = {"path": "/tmp/photosynthesis.txt", "label": "part 2",
+                   "text": "Plants release oxygen.", "score": 0.81}
+
+        def fake_stream(history, message, mode, language, use_notes, model, passages=None, use_web=False, web_sink=None):
+            self.assertEqual(passages, [passage])
+            yield "Plants release oxygen [1]."
+
+        with mock.patch.object(server.services, "retrieve", return_value=[passage]), \
+                mock.patch.object(server.services, "answer_stream", side_effect=fake_stream):
+            response = self.client.post("/api/chat", json={"message": "What do plants release?"})
+
+        self.assertIn('"type": "sources"', response.text)
+        self.assertIn("photosynthesis.txt", response.text)
+        self.assertIn('"grounded": true', response.text)
+
+    def test_chat_web_lookup_returns_live_sources(self):
+        live = {"path": "https://pgf.ng/profile", "url": "https://pgf.ng/profile",
+                "name": "pgf.ng", "label": "Governor profile",
+                "text": "Muhammad Inuwa Yahaya is serving as governor.", "score": 1.0}
+
+        def fake_stream(history, message, mode, language, use_notes, model, passages=None,
+                        use_web=False, web_sink=None):
+            self.assertTrue(use_web)
+            web_sink.extend([live])
+            yield "Muhammad Inuwa Yahaya is the governor [1]."
+
+        with mock.patch.object(server.services, "retrieve", return_value=[]), \
+                mock.patch.object(server.services, "answer_stream", side_effect=fake_stream):
+            response = self.client.post("/api/chat", json={
+                "message": "Who is the current governor of Gombe State?",
+                "use_web": True,
+            })
+
+        self.assertIn('"type": "sources"', response.text)
+        self.assertIn("https://pgf.ng/profile", response.text)
+        self.assertIn('"grounded": true', response.text)
+        self.assertIn('"web_used": true', response.text)
+        self.assertIn('"notes_used": false', response.text)
+
+    def test_chat_hides_sources_when_notes_do_not_cover_the_question(self):
+        passage = {"path": "/tmp/newtons_laws.txt", "label": "part 1",
+                   "text": "Newton described three laws.", "score": 0.7}
+
+        def fake_stream(history, message, mode, language, use_notes, model, passages=None, use_web=False, web_sink=None):
+            yield "Your notes do not cover that."
+
+        with mock.patch.object(server.services, "retrieve", return_value=[passage]), \
+                mock.patch.object(server.services, "answer_stream", side_effect=fake_stream):
+            response = self.client.post("/api/chat", json={"message": "What is the fourth law?"})
+
+        self.assertNotIn('"type": "sources"', response.text)
+        self.assertIn('"notes_used": true', response.text)
 
     def test_chat_error_is_friendly(self):
         def explode(*_args, **_kwargs):

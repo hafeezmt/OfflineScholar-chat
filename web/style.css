@@ -815,13 +815,33 @@ svg {
   margin-top: 8px;
 }
 
+.sources-label {
+  align-self: center;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
 .source-chip {
+  display: inline-block;
+  max-width: 100%;
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   padding: 2px 8px;
   border-radius: 999px;
   border: 1px solid var(--line);
   background: var(--surface);
   font-size: 0.7rem;
   color: var(--muted);
+}
+
+.source-chip:hover {
+  border-color: var(--accent);
+  color: var(--text);
 }
 
 .typing {

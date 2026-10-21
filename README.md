@@ -8,18 +8,19 @@ Students often need help with assignments and research exactly when data is expe
 
 ## Open-source AI used
 
-- **Gemma 4** (`gemma4:e2b-it-qat`), Google's open-weight model, runs locally through **Ollama** and does the chatting.
+- **Gemma 3 1B** (`gemma3:1b`) or **Qwen 2.5 1.5B** (`qwen2.5:1.5b`) runs locally through **Ollama** on 8 GB laptops; **Gemma 4** (`gemma4:e2b-it-qat`) gives the strongest answers when more RAM is free.
 - **Snowflake Arctic Embed** (`snowflake-arctic-embed:33m`), Snowflake's open-weight embedding model, also local through Ollama. It powers the optional "search my notes" feature.
 - A small FastAPI server with a hand-written offline web interface (no CDN, no cloud), plus SQLite for chats and the notes index.
 - The original Gradio interface is still included as `gradio_app.py` if you prefer it.
 
-Nothing leaves the laptop. The only network use is the optional "Save a web page" button.
+Nothing leaves the laptop by default. The only network features are the optional "Save a web page" button and the opt-in **Live lookup** switch for current facts.
 
 ## Setup (Fedora / Linux)
 
 ```bash
+ollama pull gemma3:1b                    # small model for 8 GB laptops
+ollama pull qwen2.5:1.5b                 # optional: better reasoning, still under 1 GB
 ollama pull gemma4:e2b-it-qat            # best answers, needs about 5 GB of free RAM
-ollama pull gemma3:1b                    # lite model for 8 GB laptops (used automatically)
 ollama pull snowflake-arctic-embed:33m   # only needed for the notes feature
 python3 -m venv venv
 source venv/bin/activate
@@ -27,8 +28,10 @@ pip install -r requirements.txt
 ```
 
 On a machine with less than about 5.5 GB of available RAM, OfflineScholar starts in
-**low-RAM mode** and uses `gemma3:1b` instead of the larger model. You can change the
-model any time from the model picker above the message box.
+**low-RAM mode** and uses `qwen2.5:1.5b` when it is installed, otherwise `gemma3:1b`.
+You can change the model any time from the model picker above the message box. Note that
+the first reply after a restart is slower while Ollama loads the model; the service
+preloads it in the background.
 
 Run:
 
@@ -82,12 +85,15 @@ python cli.py ask "explain Newton's second law" --mode "Explain simply"
 - Normal chat that remembers the conversation, with streaming replies
 - Study modes: just chat, explain simply, homework helper, essay outline, quiz me, summarize my text
 - Replies in English, Nigerian Pidgin or Hausa
-- Optional notes: add .pdf, .docx, .txt, .md files or saved web pages, switch on "Use notes", and the AI uses them and cites passage numbers
+- Grounded notes answers: add .pdf, .docx, .txt, .md files or saved web pages, switch on "Use notes", and relevant passages are quoted with `[1]` citations; unrelated notes are rejected instead of being forced into every answer
+- Honest limits: if the notes do not cover a question, the app says so; current or time-sensitive questions such as "latest version" are refused offline instead of guessed
+- Opt-in **Live lookup** for current facts such as the latest Python release, the current governor, or a university vice-chancellor. It quotes a dated web snippet with a clickable source, and stays off by default
 - Notes library drawer with each file's size and index state, plus re-scan and clear
 - Conversation history in a sidebar: search, rename or delete chats, and reopen them later
 - Model picker, plus automatic low-RAM mode so the laptop stays responsive
 - Light and dark themes, a mobile layout, and example prompts for quick starts
 - Friendly messages when Ollama is not running or the model is not installed
+- Background indexing and model preloading on startup, so the first question is ready sooner
 
 ## Settings (environment variables)
 
@@ -96,33 +102,67 @@ python cli.py ask "explain Newton's second law" --mode "Explain simply"
 | `OS_MODEL` | `gemma4:e2b-it-qat` | Chat model. Low-RAM machines default to `gemma3:1b`; set this to force one |
 | `OS_EMBED` | `snowflake-arctic-embed:33m` | Notes search model |
 | `OS_EMBEDDINGS` | `1` | Set to `0`/`off` for keyword-only notes search |
-| `OS_TOP_K` | `4` | How many note passages to give the model |
+| `OS_TOP_K` | `4` | Candidate passages retrieved before relevance filtering |
+| `OS_RAG_MAX_PASSAGES` | `1` | Passages actually given to the model (lower is faster) |
+| `OS_RAG_MIN_SCORE` | `0.62` | Minimum similarity for a semantic note match |
+| `OS_RAG_MIN_MARGIN` | `0.06` | Drop weaker matches too far below the best one |
+| `OS_RAG_PASSAGE_WORDS` | `90` | Maximum note words placed in the prompt |
+| `OS_EXTRACTIVE_RAG` | `1` | Quote notes directly with a citation instead of asking the model to repeat them |
+| `OS_WEB_MAX_RESULTS` | `5` | Web snippets kept for a live answer |
+| `OS_EXTRACTIVE_WEB` | `1` | Quote the best dated web snippet directly instead of asking the model to repeat it |
 | `OS_NUM_CTX` | `2048` | Context window for the chat model |
-| `OS_TEMPERATURE` | `0.5` | Answer randomness, between 0 and 2 |
+| `OS_TEMPERATURE` | `0.2` | Answer randomness, between 0 and 2 |
 | `OS_HISTORY` | `8` | Messages kept from the conversation |
-| `OS_CHUNK_WORDS` | `250` | Words per indexed chunk |
-| `OS_CHUNK_OVERLAP` | `40` | Words shared by neighbouring chunks |
+| `OS_CHUNK_WORDS` | `160` | Words per indexed chunk |
+| `OS_CHUNK_OVERLAP` | `30` | Words shared by neighbouring chunks |
 | `OS_LOW_MEMORY` | auto | `1` forces low-RAM mode, `0` turns it off |
 | `OS_NUM_PREDICT` | `384` | Maximum tokens in one answer (lower is lighter) |
 | `OS_NUM_THREAD` | half the CPUs | CPU threads used by the model; lower keeps the desktop responsive |
 | `OS_NUM_BATCH` | `128` | Prompt batch size (lower uses less peak memory) |
-| `OS_KEEP_ALIVE` | `2m` | How long the model stays in memory after the last answer |
+| `OS_KEEP_ALIVE` | `30m` | How long the model stays in memory after the last answer |
+| `OS_AUTO_INDEX` | `1` | Re-index changed notes in the background at startup |
+| `OS_WARMUP` | `1` | Preload the chat model at startup |
 | `OS_HOST` | `127.0.0.1` | Address the web app listens on (keep it local unless you know what you are doing) |
 | `OS_PORT` | `7860` | Port for the web app |
 
-## Check the notes search works
+## How notes answers stay grounded
+
+1. The question is matched against paragraph-sized note chunks. Weak or unrelated matches are dropped.
+2. If the best passage contains the question's key terms, its answer sentences are quoted directly with a `[1]` citation. This is instant and cannot be hallucinated.
+3. If the notes do not contain the answer, the app replies "Your notes do not cover that" instead of guessing.
+4. When Live lookup is off, "latest/current" questions are refused instead of guessed; known false premises such as "Newton's fourth law" are corrected.
+5. General questions still use the local chat model with a short prompt and no notes.
+
+Set `OS_EXTRACTIVE_RAG=0` to always let the model write the answer from notes (slower, and small models may forget citations).
+
+## Live lookup (optional)
+
+Switch on **Live lookup** next to the message box when you need something current: "What is the latest version of Python?", "Who is the current governor of Gombe State?", or "Who is the ViceChancellor of Gombe State University?". It is off by default, so normal study answers stay fully local.
+
+- The question is sent to a public search page (Brave, with DuckDuckGo and Wikipedia as fallbacks). No API key or account is needed.
+- The app quotes the best matching snippet, adds the date it checked, and shows the sources. Click a source chip to open the original page.
+- If the snippet is not a clean direct answer, the local model writes a short answer from the retrieved snippets instead.
+- Web pages can be stale or wrong. Prefer official pages (for example `python.org`, `gsu.edu.ng`, or a government site), and check the linked source before relying on a current fact.
+- Live lookup needs an internet connection and adds a few seconds for the search. If it fails, the app says so and does not invent an answer.
+
+## Check quality and speed
 
 ```bash
-python test_core.py                         # indexing and search with sample notes
-python -m unittest test_features test_server  # chunking, uploads, history, API and chat streaming
+python test_core.py                              # indexing and search with sample notes
+python -m unittest test_features test_server test_rag  # API, chunking, retrieval and safety checks
+python eval_quality.py --models gemma3:1b qwen2.5:1.5b --verbose
 ```
+
+`eval_quality.py` runs real questions through Ollama and checks citations, refusal behaviour,
+notes coverage, false premises and time-sensitive answers. It exits non-zero on failure, so it
+can be used before a release.
 
 ## Troubleshooting
 
 - **"The model isn't installed"**: run `ollama pull gemma4:e2b-it-qat` (and `ollama pull snowflake-arctic-embed:33m` for notes search).
 - **"I can't reach Ollama"**: start it with `ollama serve`.
 - **Search misses your notes**: open Notes and press Re-scan; if the file shows "Not indexed", it could not be read (scanned PDFs have no text layer).
-- **Wrong or stale answers from notes**: press Clear index (your files stay) and then Re-scan.
+- **Wrong or stale answers from notes**: press Clear index (your files stay) and then Re-scan. Note answers are quoted directly, so check the passage label shown under the reply.
 - **The laptop freezes or hangs while answering**: a large model is being swapped in and out of memory. Pick `gemma3:1b` in the model selector (or set `OS_MODEL=gemma3:1b`), close unused browser tabs, and keep `OS_NUM_THREAD` low. On 8 GB machines avoid `gemma4:e2b-it-qat` while other apps are open.
 
 ## Low memory tip

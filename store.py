@@ -92,8 +92,8 @@ def semantic_search(con, qvec, k):
     mat = np.stack([np.frombuffer(r[4], dtype=np.float32) for r in rows])
     scores = mat @ q
     order = np.argsort(-scores)[:k]
-    return [dict(id=rows[i][0], path=rows[i][1], label=rows[i][2], text=rows[i][3]) for i in order
-            if scores[i] > 0.15]
+    return [dict(id=rows[i][0], path=rows[i][1], label=rows[i][2], text=rows[i][3],
+                 score=float(scores[i])) for i in order if scores[i] > 0.15]
 
 
 def hybrid_search(con, query, qvec, k):

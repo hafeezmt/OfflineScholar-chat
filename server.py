@@ -1,6 +1,9 @@
 """OfflineScholar web server: FastAPI API + the custom chat frontend."""
 import json
+import logging
 import os
+import threading
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Optional
 
@@ -17,7 +20,32 @@ import services
 import store
 
 WEB_DIR = config.BASE / "web"
-app = FastAPI(title="OfflineScholar", docs_url=None, redoc_url=None)
+logger = logging.getLogger("offlinescholar")
+
+
+def _warm_up():
+    """Index changed notes and preload the model so the first question is quick."""
+    if config.AUTO_INDEX:
+        try:
+            message = services.scan_notes()
+            logger.info("Notes ready: %s", message)
+        except Exception as error:
+            logger.warning("Could not index notes on startup: %s", error)
+    if config.WARMUP:
+        try:
+            llm.warm_up()
+        except Exception as error:
+            logger.warning("Could not preload the chat model: %s", error)
+
+
+@asynccontextmanager
+async def lifespan(_app):
+    if config.AUTO_INDEX or config.WARMUP:
+        threading.Thread(target=_warm_up, daemon=True).start()
+    yield
+
+
+app = FastAPI(title="OfflineScholar", docs_url=None, redoc_url=None, lifespan=lifespan)
 
 app.mount("/static", StaticFiles(directory=WEB_DIR), name="static")
 
@@ -27,7 +55,8 @@ class ChatRequest(BaseModel):
     conversation_id: Optional[int] = None
     mode: str = "Just chat"
     language: str = "English"
-    use_notes: bool = False
+    use_notes: bool = True
+    use_web: bool = False
     model: Optional[str] = None
 
 
@@ -153,9 +182,13 @@ def chat(request: ChatRequest):
     def generate():
         yield _sse({"type": "start", "conversation_id": conversation_id})
         parts, failed = [], None
+        passages = services.retrieve(message, request.use_notes)
+        web_passages = []
         try:
             for token in services.answer_stream(history, message, request.mode, request.language,
-                                                request.use_notes, model):
+                                                request.use_notes, model, passages=passages,
+                                                use_web=request.use_web,
+                                                web_sink=web_passages):
                 parts.append(token)
                 yield _sse({"type": "token", "text": token})
         except Exception as e:
@@ -163,14 +196,21 @@ def chat(request: ChatRequest):
             parts.append(failed)
             yield _sse({"type": "error", "message": failed})
         finally:
-            text = "".join(parts).strip()
-            if text and not failed:
+            text = "" if failed else "".join(parts).strip()
+            if text:
                 writer = store.connect()
                 try:
                     store.append_message(writer, conversation_id, "assistant", text)
                 finally:
                     writer.close()
-        yield _sse({"type": "done", "conversation_id": conversation_id})
+        evidence = web_passages or passages
+        verification = services.verify_answer(text, evidence)
+        verification["web_used"] = bool(web_passages)
+        if web_passages:
+            verification["notes_used"] = False
+        if evidence and verification["citations"]:
+            yield _sse({"type": "sources", "sources": services.sources_for(evidence)})
+        yield _sse({"type": "done", "conversation_id": conversation_id, "verification": verification})
 
     return StreamingResponse(
         generate(),
