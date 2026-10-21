@@ -1,6 +1,7 @@
 """SQLite storage + search (keyword with FTS5, meaning-based with embeddings, or both)."""
 import re
 import sqlite3
+import time
 
 import numpy as np
 
@@ -24,6 +25,20 @@ def connect(db_path=None):
         CREATE VIRTUAL TABLE IF NOT EXISTS chunks_fts USING fts5(text);
         CREATE INDEX IF NOT EXISTS idx_chunks_path ON chunks(path);
         CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY, value TEXT);
+        CREATE TABLE IF NOT EXISTS conversations(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            created REAL NOT NULL,
+            updated REAL NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS messages(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            conversation_id INTEGER NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+            role TEXT NOT NULL,
+            content TEXT NOT NULL,
+            created REAL NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_messages_conversation ON messages(conversation_id, id);
         """
     )
     return con
@@ -94,6 +109,60 @@ def hybrid_search(con, query, qvec, k):
             items[item["id"]] = item
     best = sorted(scores, key=scores.get, reverse=True)[:k]
     return [items[i] for i in best]
+
+
+def create_conversation(con, title):
+    now = time.time()
+    cur = con.execute("INSERT INTO conversations(title, created, updated) VALUES (?,?,?)",
+                      (title, now, now))
+    con.commit()
+    return cur.lastrowid
+
+
+def conversation_exists(con, conversation_id):
+    return con.execute("SELECT 1 FROM conversations WHERE id=?", (conversation_id,)).fetchone() is not None
+
+
+def list_conversations(con, limit=100):
+    rows = con.execute(
+        """
+        SELECT c.id, c.title, c.updated,
+               (SELECT m.content FROM messages m WHERE m.conversation_id=c.id ORDER BY m.id DESC LIMIT 1)
+        FROM conversations c
+        ORDER BY c.updated DESC
+        LIMIT ?
+        """,
+        (limit,),
+    ).fetchall()
+    return [{"id": r[0], "title": r[1], "updated": r[2], "preview": (r[3] or "")[:140]} for r in rows]
+
+
+def conversation_messages(con, conversation_id, limit=None):
+    sql = "SELECT role, content FROM messages WHERE conversation_id=? ORDER BY id"
+    rows = con.execute(sql, (conversation_id,)).fetchall()
+    if limit:
+        rows = rows[-limit:]
+    return [{"role": r[0], "content": r[1]} for r in rows]
+
+
+def append_message(con, conversation_id, role, content):
+    now = time.time()
+    con.execute("INSERT INTO messages(conversation_id, role, content, created) VALUES (?,?,?,?)",
+                (conversation_id, role, content, now))
+    con.execute("UPDATE conversations SET updated=? WHERE id=?", (now, conversation_id))
+    con.commit()
+
+
+def rename_conversation(con, conversation_id, title):
+    con.execute("UPDATE conversations SET title=?, updated=? WHERE id=?",
+                (title, time.time(), conversation_id))
+    con.commit()
+
+
+def delete_conversation(con, conversation_id):
+    con.execute("DELETE FROM messages WHERE conversation_id=?", (conversation_id,))
+    con.execute("DELETE FROM conversations WHERE id=?", (conversation_id,))
+    con.commit()
 
 
 def get_meta(con, key, default=None):
