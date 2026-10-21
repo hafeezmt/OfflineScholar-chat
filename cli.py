@@ -57,7 +57,7 @@ def cmd_search(args):
 def cmd_ask(args):
     passages = [] if args.no_notes else search.find(args.message)
     try:
-        for token in llm.chat_stream([], args.message, args.mode, args.language, passages):
+        for token in llm.chat_stream([], args.message, args.mode, args.language, passages, model=args.model):
             print(token, end="", flush=True)
     except Exception as e:
         err = str(e).lower()
@@ -90,6 +90,7 @@ def main(argv=None):
     p_ask.add_argument("--mode", default="Just chat", choices=list(llm.MODES))
     p_ask.add_argument("--language", default="English", choices=list(llm.LANGUAGES))
     p_ask.add_argument("--no-notes", action="store_true", help="do not search the library")
+    p_ask.add_argument("--model", default=llm.default_model(), help="Ollama chat model to use")
 
     args = parser.parse_args(argv)
     return {

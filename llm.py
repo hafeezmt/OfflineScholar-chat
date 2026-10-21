@@ -28,9 +28,41 @@ BASE_SYSTEM = (
 )
 
 
+def list_models():
+    """Names of the models installed in Ollama, or [] when Ollama is not reachable."""
+    try:
+        resp = ollama.list()
+    except Exception:
+        return []
+    models = getattr(resp, "models", None)
+    if models is None and isinstance(resp, dict):
+        models = resp.get("models", [])
+    names = []
+    for m in models or []:
+        name = getattr(m, "model", None)
+        if name is None and isinstance(m, dict):
+            name = m.get("model")
+        if name:
+            names.append(name)
+    return sorted(set(names))
+
+
+def default_model(installed=None):
+    """Pick a chat model: the lite one on low-RAM machines, otherwise the configured model."""
+    models = installed
+    if models is None:
+        models = [m for m in list_models() if "embed" not in m.lower()]
+    if config.LOW_MEMORY and "gemma3:1b" in models and not config.CHAT_MODEL_EXPLICIT:
+        return "gemma3:1b"
+    if models and config.CHAT_MODEL not in models:
+        return models[0]
+    return config.CHAT_MODEL
+
+
 def embed(texts, query=False):
     prefix = config.QUERY_PREFIX if query else ""
-    resp = ollama.embed(model=config.EMBED_MODEL, input=[prefix + t for t in texts])
+    resp = ollama.embed(model=config.EMBED_MODEL, input=[prefix + t for t in texts],
+                        keep_alive=config.KEEP_ALIVE)
     return resp["embeddings"]
 
 
@@ -45,8 +77,9 @@ def trim_history(history, limit=8):
     return msgs
 
 
-def chat_stream(history, message, mode="Just chat", language="English", passages=None):
+def chat_stream(history, message, mode="Just chat", language="English", passages=None, model=None):
     """history: list of {"role","content"} dicts. Yields the reply piece by piece."""
+    model = model or config.CHAT_MODEL
     system = f"{BASE_SYSTEM}\n{MODES.get(mode, MODES['Just chat'])} {LANGUAGES.get(language, LANGUAGES['English'])}"
     if passages:
         context = "\n\n".join(
@@ -59,10 +92,17 @@ def chat_stream(history, message, mode="Just chat", language="English", passages
     messages = [{"role": "system", "content": system}] + trim_history(history, config.HISTORY_LIMIT) + [
         {"role": "user", "content": message}]
     stream = ollama.chat(
-        model=config.CHAT_MODEL,
+        model=model,
         messages=messages,
         stream=True,
-        options={"num_ctx": config.NUM_CTX, "temperature": config.TEMPERATURE},
+        keep_alive=config.KEEP_ALIVE,
+        options={
+            "num_ctx": config.NUM_CTX,
+            "temperature": config.TEMPERATURE,
+            "num_predict": config.NUM_PREDICT,
+            "num_thread": config.NUM_THREAD,
+            "num_batch": config.NUM_BATCH,
+        },
     )
     for part in stream:
         yield part["message"]["content"]

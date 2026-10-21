@@ -197,6 +197,35 @@ class WebpageTests(unittest.TestCase):
         self.assertIn("http", webpages.save_page("file:///etc/passwd"))
 
 
+class ModelChoiceTests(unittest.TestCase):
+    def setUp(self):
+        self._low = config.LOW_MEMORY
+        self._explicit = config.CHAT_MODEL_EXPLICIT
+        self._model = config.CHAT_MODEL
+
+    def tearDown(self):
+        config.LOW_MEMORY = self._low
+        config.CHAT_MODEL_EXPLICIT = self._explicit
+        config.CHAT_MODEL = self._model
+
+    def test_low_memory_prefers_the_lite_model(self):
+        config.LOW_MEMORY = True
+        config.CHAT_MODEL_EXPLICIT = False
+        config.CHAT_MODEL = "gemma4:e2b-it-qat"
+        self.assertEqual(llm.default_model(["gemma3:1b", "gemma4:e2b-it-qat"]), "gemma3:1b")
+
+    def test_explicit_model_is_respected(self):
+        config.LOW_MEMORY = True
+        config.CHAT_MODEL_EXPLICIT = True
+        config.CHAT_MODEL = "custom:7b"
+        self.assertEqual(llm.default_model(["gemma3:1b", "custom:7b"]), "custom:7b")
+
+    def test_missing_model_falls_back_to_an_installed_one(self):
+        config.LOW_MEMORY = False
+        config.CHAT_MODEL = "not-installed"
+        self.assertEqual(llm.default_model(["tinyllama:latest"]), "tinyllama:latest")
+
+
 class UiTests(unittest.TestCase):
     def test_chat_history_is_saved(self):
         self.assertTrue(app.chat_ui.save_history)
