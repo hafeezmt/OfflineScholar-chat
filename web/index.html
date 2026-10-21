@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#2563eb">
+  <title>OfflineScholar</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" id="sidebar" aria-label="Chat history">
+      <div class="sidebar-head">
+        <a class="brand" href="/" aria-label="OfflineScholar home">
+          <span class="brand-logo" aria-hidden="true">
+            <svg viewBox="0 0 48 48" width="34" height="34">
+              <rect x="1" y="1" width="46" height="46" rx="14" fill="#2563eb"/>
+              <path d="M13 15h10a5 5 0 0 1 5 5v14a4 4 0 0 0-4-4H13z" fill="#fff" opacity=".95"/>
+              <path d="M35 15H25a5 5 0 0 0-5 5v14a4 4 0 0 1 4-4h11z" fill="#bfdbfe" opacity=".9"/>
+              <circle cx="34" cy="34" r="3.2" fill="#34d399"/>
+            </svg>
+          </span>
+          <span class="brand-name">OfflineScholar</span>
+        </a>
+        <button class="icon-btn" id="themeBtn" type="button" aria-label="Toggle dark mode" title="Toggle theme">
+          <svg class="icon-sun" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+            <circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"/>
+            <path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          <svg class="icon-moon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+            <path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </div>
+
+      <button class="btn primary new-chat" id="newChatBtn" type="button">
+        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+          <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+        </svg>
+        New chat
+      </button>
+
+      <div class="search">
+        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+          <circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/>
+          <path d="M16.5 16.5L21 21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <input id="searchInput" type="search" placeholder="Search chats" aria-label="Search chats" autocomplete="off">
+      </div>
+
+      <div class="chat-list" id="chatList" role="list"></div>
+
+      <div class="sidebar-foot">
+        <div class="status" id="status" role="status">
+          <span class="status-dot" aria-hidden="true"></span>
+          <span class="status-text">Checking Ollama…</span>
+        </div>
+        <button class="foot-btn" id="notesBtnSide" type="button">
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+            <path d="M6 3h9l4 4v14H6z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+            <path d="M9 12h7M9 16h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+          Notes library
+          <span class="count" id="notesCount">0</span>
+        </button>
+        <p class="memory-note" id="memoryNote" hidden></p>
+      </div>
+    </aside>
+
+    <div class="main">
+      <header class="chat-header">
+        <button class="icon-btn menu-btn" id="menuBtn" type="button" aria-label="Open chat history">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+            <path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
+        <div class="chat-identity">
+          <span class="avatar" aria-hidden="true">OS</span>
+          <div class="chat-identity-text">
+            <h1 id="chatTitle" title="Click to rename">New chat</h1>
+            <p id="chatSub">Your private, offline study tutor</p>
+          </div>
+        </div>
+        <div class="header-actions">
+          <button class="btn ghost" id="notesBtn" type="button">
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+              <path d="M6 3h9l4 4v14H6z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+              <path d="M9 12h7M9 16h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            </svg>
+            Notes
+          </button>
+          <button class="btn primary" id="newChatBtnTop" type="button">New chat</button>
+        </div>
+      </header>
+
+      <div class="error-banner" id="banner" role="alert" hidden>
+        <span id="bannerText"></span>
+        <button class="icon-btn" id="bannerClose" type="button" aria-label="Dismiss">×</button>
+      </div>
+
+      <main class="messages" id="messages" aria-live="polite"></main>
+
+      <footer class="composer-wrap">
+        <form class="composer" id="composer">
+          <label class="sr-only" for="input">Message</label>
+          <textarea id="input" rows="1" placeholder="Ask anything, paste homework, or start a quiz…" autocomplete="off"></textarea>
+          <div class="composer-row">
+            <div class="composer-tools">
+              <label class="select"><span>Mode</span><select id="mode" aria-label="Study mode"></select></label>
+              <label class="select"><span>Language</span><select id="language" aria-label="Reply language"></select></label>
+              <label class="select model-select"><span>Model</span><select id="model" aria-label="Chat model"></select></label>
+              <button type="button" class="pill" id="notesToggle" aria-pressed="false" title="Search the notes library">
+                <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+                  <path d="M6 3h9l4 4v14H6z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+                </svg>
+                Use notes
+              </button>
+            </div>
+            <div class="send-wrap">
+              <span class="hint">Enter to send · Shift+Enter for a new line</span>
+              <button class="btn primary send" id="sendBtn" type="submit">
+                Send
+                <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                  <path d="M4 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+              <button class="btn danger stop" id="stopBtn" type="button" hidden>Stop</button>
+            </div>
+          </div>
+        </form>
+      </footer>
+    </div>
+  </div>
+
+  <div class="backdrop" id="backdrop" hidden></div>
+
+  <aside class="drawer" id="notesDrawer" aria-label="Notes library" aria-hidden="true" hidden>
+    <header class="drawer-head">
+      <div>
+        <h2>Notes library</h2>
+        <p>Your files stay on this laptop.</p>
+      </div>
+      <button class="icon-btn" id="drawerClose" type="button" aria-label="Close notes">×</button>
+    </header>
+
+    <div class="drawer-body">
+      <section class="drawer-section">
+        <h3>Add material</h3>
+        <label class="dropzone" id="dropzone">
+          <input id="fileInput" type="file" multiple accept=".pdf,.docx,.txt,.md">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+            <path d="M12 16V4M7 9l5-5 5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          <span><b>Choose files</b> or drop them here<br><small>PDF, DOCX, TXT, MD · up to 25 MB</small></span>
+        </label>
+      </section>
+
+      <section class="drawer-section">
+        <h3>Save a web page</h3>
+        <form class="url-form" id="urlForm">
+          <input id="urlInput" type="url" placeholder="https://example.com/article" aria-label="Web page address">
+          <button class="btn primary" type="submit">Save</button>
+        </form>
+      </section>
+
+      <section class="drawer-section grow">
+        <div class="section-head">
+          <h3>Your library <span class="count" id="drawerNotesCount">0</span></h3>
+          <div class="section-actions">
+            <button class="btn small" id="rescanBtn" type="button">Re-scan</button>
+            <button class="btn small danger-ghost" id="clearBtn" type="button">Clear index</button>
+          </div>
+        </div>
+        <p class="drawer-status" id="notesStatus" hidden></p>
+        <ul class="file-list" id="fileList"></ul>
+      </section>
+    </div>
+  </aside>
+
+  <div class="toast" id="toast" role="status" hidden></div>
+  <script src="/static/app.js" defer></script>
+</body>
+</html>

@@ -106,11 +106,11 @@ def answer_stream(history, message, mode, language, use_notes, model):
     yield from llm.chat_stream(history, message, mode, language, passages, model=model)
 
 
-def friendly_error(error):
+def friendly_error(error, model=None):
     text = str(error)
     lowered = text.lower()
     if "not found" in lowered:
-        return f"The model isn't installed. Run:  ollama pull {config.CHAT_MODEL}"
+        return f"The model isn't installed. Run:  ollama pull {model or config.CHAT_MODEL}"
     if "connect" in lowered or "refused" in lowered:
         return "I can't reach Ollama. Start it with:  ollama serve"
     return f"Something went wrong: {text}"

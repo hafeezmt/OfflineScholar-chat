@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-import app
+import gradio_app as app
 import config
 import ingest
 import llm

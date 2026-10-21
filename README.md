@@ -10,7 +10,8 @@ Students often need help with assignments and research exactly when data is expe
 
 - **Gemma 4** (`gemma4:e2b-it-qat`), Google's open-weight model, runs locally through **Ollama** and does the chatting.
 - **Snowflake Arctic Embed** (`snowflake-arctic-embed:33m`), Snowflake's open-weight embedding model, also local through Ollama. It powers the optional "search my notes" feature.
-- Gradio for the interface, SQLite for the notes index.
+- A small FastAPI server with a hand-written offline web interface (no CDN, no cloud), plus SQLite for chats and the notes index.
+- The original Gradio interface is still included as `gradio_app.py` if you prefer it.
 
 Nothing leaves the laptop. The only network use is the optional "Save a web page" button.
 
@@ -27,19 +28,45 @@ pip install -r requirements.txt
 
 On a machine with less than about 5.5 GB of available RAM, OfflineScholar starts in
 **low-RAM mode** and uses `gemma3:1b` instead of the larger model. You can change the
-model any time under **Study settings** in the Chat tab.
+model any time from the model picker above the message box.
 
-Run (two terminal tabs):
+Run:
 
 ```bash
-# tab 1
-ollama serve
-# tab 2
 source venv/bin/activate
 python app.py
 ```
 
-Open the link it prints (usually http://127.0.0.1:7860).
+Open http://127.0.0.1:7860. Ollama is usually already running as a service; if it is not,
+start it in another terminal with `ollama serve`. For an app-style window without browser
+tabs, run `./launch.sh` — it starts the local service first if needed. The original Gradio
+interface is still available with `python gradio_app.py`.
+
+### Run in the background (optional)
+
+```bash
+mkdir -p ~/.config/systemd/user
+cat > ~/.config/systemd/user/offlinescholar.service <<'EOF'
+[Unit]
+Description=OfflineScholar local study assistant
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/offlinescholar
+ExecStart=%h/offlinescholar/venv/bin/python %h/offlinescholar/app.py
+Environment=OS_PORT=7860
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target
+EOF
+systemctl --user daemon-reload
+systemctl --user enable --now offlinescholar
+```
+
+Check it with `systemctl --user status offlinescholar` or open http://127.0.0.1:7860.
 
 Prefer the terminal? The same library and models work without a browser:
 
@@ -52,15 +79,14 @@ python cli.py ask "explain Newton's second law" --mode "Explain simply"
 
 ## Features
 
-- Normal chat that remembers the conversation
+- Normal chat that remembers the conversation, with streaming replies
 - Study modes: just chat, explain simply, homework helper, essay outline, quiz me, summarize my text
 - Replies in English, Nigerian Pidgin or Hausa
-- Optional notes: add .pdf, .docx, .txt, .md files or saved web pages, tick "Also search my notes", and the AI uses them and shows which file it used
-- Notes list shows each file's size and whether it is indexed
-- Clear the index without deleting your files, then re-scan
-- Your chat history is kept in this browser: reopen an older conversation from the history panel, or start a new one
+- Optional notes: add .pdf, .docx, .txt, .md files or saved web pages, switch on "Use notes", and the AI uses them and cites passage numbers
+- Notes library drawer with each file's size and index state, plus re-scan and clear
+- Conversation history in a sidebar: search, rename or delete chats, and reopen them later
 - Model picker, plus automatic low-RAM mode so the laptop stays responsive
-- Example prompts for quick starts
+- Light and dark themes, a mobile layout, and example prompts for quick starts
 - Friendly messages when Ollama is not running or the model is not installed
 
 ## Settings (environment variables)
@@ -81,21 +107,23 @@ python cli.py ask "explain Newton's second law" --mode "Explain simply"
 | `OS_NUM_THREAD` | half the CPUs | CPU threads used by the model; lower keeps the desktop responsive |
 | `OS_NUM_BATCH` | `128` | Prompt batch size (lower uses less peak memory) |
 | `OS_KEEP_ALIVE` | `2m` | How long the model stays in memory after the last answer |
+| `OS_HOST` | `127.0.0.1` | Address the web app listens on (keep it local unless you know what you are doing) |
+| `OS_PORT` | `7860` | Port for the web app |
 
 ## Check the notes search works
 
 ```bash
-python test_core.py       # indexing and search with sample notes
-python test_features.py   # chunking, uploads, history and page extraction
+python test_core.py                         # indexing and search with sample notes
+python -m unittest test_features test_server  # chunking, uploads, history, API and chat streaming
 ```
 
 ## Troubleshooting
 
 - **"The model isn't installed"**: run `ollama pull gemma4:e2b-it-qat` (and `ollama pull snowflake-arctic-embed:33m` for notes search).
 - **"I can't reach Ollama"**: start it with `ollama serve`.
-- **Search misses your notes**: open My notes and press Re-scan library; if the file shows "not indexed", it could not be read (scanned PDFs have no text layer).
-- **Wrong or stale answers from notes**: press "Clear index (keeps files)" and then Re-scan library.
-- **The laptop freezes or hangs while answering**: a large model is being swapped in and out of memory. Use the `gemma3:1b` model in Study settings (or `OS_MODEL=gemma3:1b`), close unused browser tabs, and keep `OS_NUM_THREAD` low. On 8 GB machines avoid `gemma4:e2b-it-qat` while other apps are open.
+- **Search misses your notes**: open Notes and press Re-scan; if the file shows "Not indexed", it could not be read (scanned PDFs have no text layer).
+- **Wrong or stale answers from notes**: press Clear index (your files stay) and then Re-scan.
+- **The laptop freezes or hangs while answering**: a large model is being swapped in and out of memory. Pick `gemma3:1b` in the model selector (or set `OS_MODEL=gemma3:1b`), close unused browser tabs, and keep `OS_NUM_THREAD` low. On 8 GB machines avoid `gemma4:e2b-it-qat` while other apps are open.
 
 ## Low memory tip
 
