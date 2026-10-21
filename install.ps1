@@ -9,8 +9,7 @@ $EmbedModel = if ($env:OS_EMBED_MODEL) { $env:OS_EMBED_MODEL } else { "snowflake
 $Port = if ($env:OS_PORT) { $env:OS_PORT } else { "7860" }
 $SkipDeps = $env:OS_SKIP_DEPS -eq "1"
 $SkipModels = $env:OS_SKIP_MODELS -eq "1"
-$NoStart = $env:OS_NO_START -eq "1"
-$Url = "http://127.0.0.1:$Port"
+$SkipDesktop = $env:OS_SKIP_DESKTOP -eq "1"
 $ArchiveUrl = "https://github.com/hafeezmt/OfflineScholar-chat/archive/refs/heads/main.zip"
 
 function Write-Step([string]$Message) {
@@ -21,6 +20,10 @@ function Write-Step([string]$Message) {
 function Stop-Install([string]$Message) {
     Write-Host "Error: $Message" -ForegroundColor Red
     exit 1
+}
+
+if ($Port -notmatch '^\d+$') {
+    Stop-Install "OS_PORT must be a number."
 }
 
 function Refresh-Path {
@@ -163,58 +166,77 @@ if ($LASTEXITCODE -ne 0) {
     Stop-Install "Could not install the Python packages."
 }
 
+$settings = @{
+    chat_model = $ChatModel
+    embed_model = $EmbedModel
+    port = [int]$Port
+} | ConvertTo-Json
+Set-Content -Path (Join-Path $InstallDir "settings.json") -Value $settings -Encoding ASCII
+
+$cli = @'
+@echo off
+"%~dp0venv\Scripts\python.exe" "%~dp0manage.py" %*
+'@
+Set-Content -Path (Join-Path $InstallDir "offlinescholar.cmd") -Value $cli -Encoding ASCII
+Set-Content -Path (Join-Path $InstallDir "offlinescolar.cmd") -Value $cli -Encoding ASCII
+
 $startBat = @'
 @echo off
-cd /d "%~dp0"
-set "OS_LOW_MEMORY=1"
-set "OS_MODEL=__MODEL__"
-set "OS_PORT=__PORT__"
-"%~dp0venv\Scripts\python.exe" "%~dp0app.py"
+"%~dp0venv\Scripts\python.exe" "%~dp0manage.py" up
 '@
-$startBat = $startBat.Replace("__MODEL__", $ChatModel).Replace("__PORT__", $Port)
 Set-Content -Path (Join-Path $InstallDir "start.bat") -Value $startBat -Encoding ASCII
 
 $stopBat = @'
 @echo off
-for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":__PORT__ " ^| findstr LISTENING') do taskkill /F /PID %%a >nul 2>&1
+"%~dp0venv\Scripts\python.exe" "%~dp0manage.py" stop
 '@
-$stopBat = $stopBat.Replace("__PORT__", $Port)
 Set-Content -Path (Join-Path $InstallDir "stop.bat") -Value $stopBat -Encoding ASCII
 
-if ($NoStart) {
-    Write-Step "Skipping app startup because OS_NO_START=1"
-} else {
-    if (Test-Url "$Url/api/status") {
-        Write-Step "OfflineScholar is already running"
-    } else {
-        Write-Step "Starting OfflineScholar"
-        $env:OS_LOW_MEMORY = "1"
-        $env:OS_MODEL = $ChatModel
-        $env:OS_PORT = $Port
-        Start-Process -FilePath $venvPython -ArgumentList "app.py" `
-            -WorkingDirectory $InstallDir -WindowStyle Hidden `
-            -RedirectStandardOutput (Join-Path $InstallDir "server.log") `
-            -RedirectStandardError (Join-Path $InstallDir "server.err")
-        for ($i = 0; $i -lt 60; $i++) {
-            Start-Sleep -Seconds 1
-            if (Test-Url "$Url/api/status") {
-                break
-            }
-        }
-    }
-    if (-not (Test-Url "$Url/api/status")) {
-        $errorLog = Join-Path $InstallDir "server.err"
-        if (Test-Path $errorLog) {
-            Get-Content $errorLog -Tail 20
-        }
-        Stop-Install "The app did not start. Open start.bat to see the error."
-    }
-    Start-Process $Url
-    Write-Step "OfflineScholar is ready"
-    Write-Host "Open: $Url"
+$userPath = [Environment]::GetEnvironmentVariable("Path", "User")
+$pathParts = @($userPath -split ";" | Where-Object { $_ })
+if ($pathParts -notcontains $InstallDir) {
+    [Environment]::SetEnvironmentVariable("Path", (($pathParts + $InstallDir) -join ";"), "User")
 }
+if (($env:Path -split ";") -notcontains $InstallDir) {
+    $env:Path = "$InstallDir;$env:Path"
+}
+
+if (-not $SkipDesktop) {
+    $pythonw = Join-Path $InstallDir "venv\Scripts\pythonw.exe"
+    if (Test-Path $pythonw) {
+        function New-AppShortcut([string]$Path) {
+            $shell = New-Object -ComObject WScript.Shell
+            $shortcut = $shell.CreateShortcut($Path)
+            $shortcut.TargetPath = $pythonw
+            $shortcut.Arguments = '"' + (Join-Path $InstallDir "desktop.py") + '"'
+            $shortcut.WorkingDirectory = $InstallDir
+            $shortcut.Description = "OfflineScholar"
+            $shortcut.Save()
+        }
+        try {
+            $programs = [Environment]::GetFolderPath("Programs")
+            New-AppShortcut (Join-Path $programs "OfflineScholar.lnk")
+            $desktop = [Environment]::GetFolderPath("Desktop")
+            if ($desktop) {
+                New-AppShortcut (Join-Path $desktop "OfflineScholar.lnk")
+            }
+        } catch {
+            Write-Host "Could not create the app shortcut: $($_.Exception.Message)"
+        }
+    }
+}
+
+& $venvPython (Join-Path $InstallDir "manage.py") stop | Out-Null
 
 Write-Host ""
 Write-Host "Installed in: $InstallDir"
-Write-Host "Start again later: $(Join-Path $InstallDir 'start.bat')"
-Write-Host "Stop the app: $(Join-Path $InstallDir 'stop.bat')"
+Write-Host ""
+Write-Host "Start OfflineScholar from any terminal:"
+Write-Host "  offlinescholar up"
+Write-Host ""
+Write-Host "Stop it and release RAM:"
+Write-Host "  offlinescholar stop"
+if (-not $SkipDesktop) {
+    Write-Host ""
+    Write-Host "Or open OfflineScholar from the Start Menu or Desktop."
+}

@@ -8,3 +8,8 @@ scholar.db
 scholar.db-*
 library/saved_pages/
 .DS_Store
+settings.json
+server.pid
+ollama.log
+server.err
+server.log
