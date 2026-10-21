@@ -197,5 +197,14 @@ class WebpageTests(unittest.TestCase):
         self.assertIn("http", webpages.save_page("file:///etc/passwd"))
 
 
+class UiTests(unittest.TestCase):
+    def test_chat_history_is_saved(self):
+        self.assertTrue(app.chat_ui.save_history)
+
+    def test_theme_and_assets_are_available(self):
+        self.assertTrue(app.CSS)
+        self.assertTrue(app.AVATARS)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

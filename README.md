@@ -53,6 +53,8 @@ python cli.py ask "explain Newton's second law" --mode "Explain simply"
 - Optional notes: add .pdf, .docx, .txt, .md files or saved web pages, tick "Also search my notes", and the AI uses them and shows which file it used
 - Notes list shows each file's size and whether it is indexed
 - Clear the index without deleting your files, then re-scan
+- Your chat history is kept in this browser: reopen an older conversation from the history panel, or start a new one
+- Example prompts for quick starts
 - Friendly messages when Ollama is not running or the model is not installed
 
 ## Settings (environment variables)

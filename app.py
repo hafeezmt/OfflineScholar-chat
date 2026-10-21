@@ -16,6 +16,42 @@ config.LIBRARY_DIR.mkdir(exist_ok=True)
 
 OLLAMA_HELP = "I can't reach Ollama. Start it in another terminal with:  ollama serve"
 
+ASSETS = config.BASE / "assets"
+CSS = ""
+if (ASSETS / "style.css").exists():
+    CSS = (ASSETS / "style.css").read_text(encoding="utf-8")
+AVATARS = (str(ASSETS / "user.svg"), str(ASSETS / "scholar.svg"))
+if not all(Path(p).exists() for p in AVATARS):
+    AVATARS = None
+
+THEME = gr.themes.Soft(
+    primary_hue="emerald",
+    secondary_hue="teal",
+    neutral_hue="slate",
+    font=["ui-sans-serif", "system-ui", "-apple-system", "Segoe UI", "Roboto", "sans-serif"],
+)
+
+# Gradio 6 moved theme and css from Blocks() to launch().
+BLOCKS_KWARGS = {"title": "OfflineScholar"}
+LAUNCH_KWARGS = {}
+if int(gr.__version__.split(".")[0]) >= 6:
+    LAUNCH_KWARGS = {"theme": THEME, "css": CSS}
+else:
+    BLOCKS_KWARGS.update(theme=THEME, css=CSS)
+
+HEADER = f"""
+<div class="hero">
+  <span class="eyebrow">Private &middot; Offline &middot; Free</span>
+  <h1>OfflineScholar</h1>
+  <p>Your study tutor that runs entirely on this laptop. Ask questions, work through homework,
+  practise quizzes and search your own notes &mdash; no internet required.</p>
+  <div class="chips">
+    <span class="chip">Chat model: <code>{config.CHAT_MODEL}</code></span>
+    <span class="chip">Notes search: <code>{config.EMBED_MODEL}</code></span>
+  </div>
+</div>
+"""
+
 
 def normalize_history(history):
     """Gradio versions send history in different shapes. Turn it into role/content dicts."""
@@ -160,19 +196,32 @@ def library_list():
     return f"**{len(files)} file(s), {_size(total)}**\n" + "\n".join(lines)
 
 
-with gr.Blocks(title="OfflineScholar") as demo:
-    gr.Markdown(
-        "# OfflineScholar\nChat with an AI for your studies, **with no internet**. "
-        f"Running locally: `{config.CHAT_MODEL}`."
-    )
+with gr.Blocks(**BLOCKS_KWARGS) as demo:
+    gr.Markdown(HEADER, elem_id="app-header")
     with gr.Tab("Chat"):
-        gr.ChatInterface(
+        chat_ui = gr.ChatInterface(
             fn=chat,
+            chatbot=gr.Chatbot(
+                show_label=False,
+                layout="bubble",
+                height=520,
+                elem_id="scholar-chat",
+                avatar_images=AVATARS,
+                placeholder="Ask your first question, paste your homework, or start a quiz.",
+            ),
+            textbox=gr.Textbox(placeholder="Ask a question, paste homework, or start a quiz...", scale=8),
             additional_inputs=[
                 gr.Dropdown(list(llm.MODES), value="Just chat", label="Study mode", render=False),
                 gr.Dropdown(list(llm.LANGUAGES), value="English", label="Language", render=False),
-                gr.Checkbox(value=False, label="Also search my notes (Library tab)", render=False),
+                gr.Checkbox(value=False, label="Also search my notes (My notes tab)", render=False),
             ],
+            additional_inputs_accordion="Study settings",
+            examples=[
+                ["Explain photosynthesis like I am ten", "Explain simply", "English", False],
+                ["Quiz me on Newton's laws", "Quiz me", "English", False],
+                ["Summarise my notes on photosynthesis", "Summarize my text", "English", True],
+            ],
+            save_history=True,
         )
     with gr.Tab("My notes (optional)"):
         gr.Markdown("Add your notes, PDFs or saved pages. Tick **Also search my notes** in the Chat tab "
@@ -190,6 +239,10 @@ with gr.Blocks(title="OfflineScholar") as demo:
         clear_btn.click(clear_index, None, status)
         save_btn.click(save_url, url, status).then(library_list, None, files_md)
         demo.load(library_list, None, files_md)
+    gr.Markdown(
+        '<p><span class="dot"></span>Runs locally. Nothing leaves your laptop unless you save a web page.</p>',
+        elem_id="app-footer",
+    )
 
 if __name__ == "__main__":
-    demo.launch()
+    demo.launch(**LAUNCH_KWARGS)

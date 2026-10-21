@@ -1,0 +1,126 @@
+.gradio-container {
+  max-width: 1080px !important;
+  margin: 0 auto !important;
+  padding: 16px !important;
+}
+
+#app-header {
+  margin-bottom: 4px;
+}
+
+#app-header .hero {
+  position: relative;
+  overflow: hidden;
+  border-radius: 24px;
+  padding: 30px 34px;
+  color: #ffffff;
+  background:
+    radial-gradient(circle at 85% 15%, rgba(255, 255, 255, 0.22), transparent 42%),
+    radial-gradient(circle at 10% 110%, rgba(255, 255, 255, 0.16), transparent 50%),
+    linear-gradient(125deg, #047857 0%, #0d9488 48%, #0891b2 100%);
+  box-shadow: 0 18px 40px -22px rgba(4, 120, 87, 0.75);
+}
+
+#app-header .eyebrow {
+  display: inline-block;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+#app-header h1 {
+  margin: 14px 0 8px;
+  font-size: clamp(2rem, 4vw, 2.9rem);
+  font-weight: 750;
+  letter-spacing: -0.03em;
+  line-height: 1.08;
+}
+
+#app-header p {
+  margin: 0;
+  max-width: 62ch;
+  font-size: 1.02rem;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+#app-header .chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+#app-header .chip {
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(4, 47, 46, 0.32);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.94);
+}
+
+#app-header .chip code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.78rem;
+  color: #d1fae5;
+}
+
+#scholar-chat {
+  border-radius: 20px;
+  border: 1px solid var(--border-color-primary);
+  box-shadow: 0 14px 36px -28px rgba(15, 23, 42, 0.55);
+  overflow: hidden;
+}
+
+#app-footer {
+  margin-top: 10px;
+  text-align: center;
+}
+
+#app-footer p {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--body-text-color-subdued);
+}
+
+#app-footer .dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.18);
+  vertical-align: middle;
+}
+
+.tab-nav button {
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.gradio-container .prose h2,
+.gradio-container .prose h3 {
+  letter-spacing: -0.01em;
+}
+
+@media (max-width: 640px) {
+  .gradio-container {
+    padding: 10px !important;
+  }
+
+  #app-header .hero {
+    padding: 22px 20px;
+    border-radius: 18px;
+  }
+
+  #app-header .chips {
+    margin-top: 14px;
+  }
+}
