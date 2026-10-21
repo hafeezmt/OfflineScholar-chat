@@ -15,7 +15,40 @@ Students often need help with assignments and research exactly when data is expe
 
 Nothing leaves the laptop. The only network feature is the optional "Save a web page" button; the app itself answers offline.
 
-## Setup (Fedora / Linux)
+## Install with one command
+
+Windows 10/11, in PowerShell:
+
+```powershell
+powershell -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/hafeezmt/OfflineScholar-chat/main/install.ps1 | iex"
+```
+
+Linux/macOS:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/hafeezmt/OfflineScholar-chat/main/install.sh | bash
+```
+
+The installer downloads the app into `~/OfflineScholar`, installs Ollama and Python if they
+are missing, downloads the small chat and notes models, and starts OfflineScholar at
+http://127.0.0.1:7860. The first run needs internet and about 2-3 GB of space; after that the
+app works offline.
+
+To choose another folder or port:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/hafeezmt/OfflineScholar-chat/main/install.sh | OS_INSTALL_DIR="$HOME/apps/OfflineScholar" OS_PORT=7861 bash
+```
+
+On Windows, set the same variables before running the PowerShell command:
+
+```powershell
+$env:OS_INSTALL_DIR = "D:\OfflineScholar"
+$env:OS_PORT = "7861"
+irm https://raw.githubusercontent.com/hafeezmt/OfflineScholar-chat/main/install.ps1 | iex
+```
+
+## Manual setup (Linux/macOS)
 
 ```bash
 ollama pull gemma3:1b                    # small model for 8 GB laptops
