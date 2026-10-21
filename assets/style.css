@@ -124,3 +124,17 @@
     margin-top: 14px;
   }
 }
+
+#app-notice {
+  margin: 10px 0 2px;
+  padding: 10px 14px;
+  border-left: 4px solid #f59e0b;
+  border-radius: 12px;
+  background: rgba(245, 158, 11, 0.1);
+}
+
+#app-notice p {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}

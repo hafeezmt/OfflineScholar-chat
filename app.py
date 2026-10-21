@@ -39,6 +39,13 @@ if int(gr.__version__.split(".")[0]) >= 6:
 else:
     BLOCKS_KWARGS.update(theme=THEME, css=CSS)
 
+MODELS = [m for m in llm.list_models() if "embed" not in m.lower()]
+DEFAULT_MODEL = llm.default_model(MODELS)
+if not MODELS:
+    MODELS = [DEFAULT_MODEL]
+
+LOW_RAM_CHIP = '<span class="chip">Low-RAM mode</span>' if config.LOW_MEMORY else ""
+
 HEADER = f"""
 <div class="hero">
   <span class="eyebrow">Private &middot; Offline &middot; Free</span>
@@ -46,8 +53,9 @@ HEADER = f"""
   <p>Your study tutor that runs entirely on this laptop. Ask questions, work through homework,
   practise quizzes and search your own notes &mdash; no internet required.</p>
   <div class="chips">
-    <span class="chip">Chat model: <code>{config.CHAT_MODEL}</code></span>
+    <span class="chip">Chat model: <code>{DEFAULT_MODEL}</code></span>
     <span class="chip">Notes search: <code>{config.EMBED_MODEL}</code></span>
+    {LOW_RAM_CHIP}
   </div>
 </div>
 """
@@ -72,9 +80,10 @@ def normalize_history(history):
     return msgs
 
 
-def chat(message, history, mode, language, use_notes):
+def chat(message, history, mode, language, use_notes, model=None):
     if isinstance(message, dict):
         message = message.get("text", "")
+    model = model or DEFAULT_MODEL
     passages = []
     if use_notes:
         try:
@@ -83,13 +92,13 @@ def chat(message, history, mode, language, use_notes):
             passages = []
     text = ""
     try:
-        for token in llm.chat_stream(normalize_history(history), message, mode, language, passages):
+        for token in llm.chat_stream(normalize_history(history), message, mode, language, passages, model=model):
             text += token
             yield text
     except Exception as e:
         err = str(e).lower()
         if "not found" in err:
-            note = f"The model isn't installed. Run:  ollama pull {config.CHAT_MODEL}"
+            note = f"The model isn't installed. Run:  ollama pull {model}"
         elif "connect" in err or "refused" in err:
             note = OLLAMA_HELP
         else:
@@ -198,6 +207,13 @@ def library_list():
 
 with gr.Blocks(**BLOCKS_KWARGS) as demo:
     gr.Markdown(HEADER, elem_id="app-header")
+    if config.LOW_MEMORY:
+        gr.Markdown(
+            f"**Low-RAM mode is on.** `{DEFAULT_MODEL}` is selected to keep this laptop responsive. "
+            "Close unused browser tabs, and pick a bigger model under **Study settings** only if you have "
+            "memory to spare.",
+            elem_id="app-notice",
+        )
     with gr.Tab("Chat"):
         chat_ui = gr.ChatInterface(
             fn=chat,
@@ -214,12 +230,13 @@ with gr.Blocks(**BLOCKS_KWARGS) as demo:
                 gr.Dropdown(list(llm.MODES), value="Just chat", label="Study mode", render=False),
                 gr.Dropdown(list(llm.LANGUAGES), value="English", label="Language", render=False),
                 gr.Checkbox(value=False, label="Also search my notes (My notes tab)", render=False),
+                gr.Dropdown(MODELS, value=DEFAULT_MODEL, label="Chat model", render=False),
             ],
             additional_inputs_accordion="Study settings",
             examples=[
-                ["Explain photosynthesis like I am ten", "Explain simply", "English", False],
-                ["Quiz me on Newton's laws", "Quiz me", "English", False],
-                ["Summarise my notes on photosynthesis", "Summarize my text", "English", True],
+                ["Explain photosynthesis like I am ten", "Explain simply", "English", False, DEFAULT_MODEL],
+                ["Quiz me on Newton's laws", "Quiz me", "English", False, DEFAULT_MODEL],
+                ["Summarise my notes on photosynthesis", "Summarize my text", "English", True, DEFAULT_MODEL],
             ],
             save_history=True,
         )
@@ -244,5 +261,10 @@ with gr.Blocks(**BLOCKS_KWARGS) as demo:
         elem_id="app-footer",
     )
 
+demo.queue(default_concurrency_limit=1, max_size=8)
+
 if __name__ == "__main__":
+    if config.LOW_MEMORY:
+        print(f"Low memory detected: using {DEFAULT_MODEL} to keep the laptop responsive.")
+        print("Set OS_MODEL to force another model, or OS_LOW_MEMORY=0 to disable this.")
     demo.launch(**LAUNCH_KWARGS)
