@@ -66,6 +66,12 @@ def scan_library(con, embed_fn=None, folder=None):
             store.remove_file(con, path)
 
     embed_ok = embed_fn is not None
+    if embed_ok:
+        stored_model = store.get_meta(con, "embed_model")
+        if stored_model != config.EMBED_MODEL:
+            store.drop_embeddings(con)
+            if stored_model is not None:
+                notes.append(f"Embedding model changed to {config.EMBED_MODEL}; rebuilding note vectors.")
     for p in files:
         st = p.stat()
         row = con.execute("SELECT mtime,size,has_emb FROM files WHERE path=?", (str(p),)).fetchone()
@@ -106,5 +112,8 @@ def scan_library(con, embed_fn=None, folder=None):
                     (str(p), st.st_mtime, st.st_size, 1 if vectors[0] is not None else 0))
         added += 1
     con.commit()
+    if embed_fn is not None and embed_ok:
+        store.set_meta(con, "embed_model", config.EMBED_MODEL)
+        con.commit()
     msg = f"Indexed {added} new or changed file(s), {skipped} unchanged, {len(files)} total."
     return " ".join([msg] + notes)

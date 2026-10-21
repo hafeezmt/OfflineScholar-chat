@@ -68,6 +68,46 @@ class StoreTests(unittest.TestCase):
         self.assertEqual([h["path"] for h in hits], ["a.txt"])
 
 
+class IngestTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.library = Path(self.tmp.name) / "library"
+        self.library.mkdir()
+        (self.library / "n.txt").write_text("force equals mass times acceleration")
+        self.con = temp_db(self.tmp.name)
+        self._old_model = config.EMBED_MODEL
+
+    def tearDown(self):
+        config.EMBED_MODEL = self._old_model
+        self.con.close()
+        self.tmp.cleanup()
+
+    def test_switching_embedding_model_rebuilds_vectors(self):
+        def embed_a(texts, query=False):
+            return [[1.0, 0.0, 0.0, 0.0] for _ in texts]
+
+        def embed_b(texts, query=False):
+            return [[0.0, 1.0, 0.0, 0.0] for _ in texts]
+
+        config.EMBED_MODEL = "model-a"
+        ingest.scan_library(self.con, embed_fn=embed_a, folder=self.library)
+        self.assertEqual(store.get_meta(self.con, "embed_model"), "model-a")
+
+        config.EMBED_MODEL = "model-b"
+        message = ingest.scan_library(self.con, embed_fn=embed_b, folder=self.library)
+        self.assertIn("Embedding model changed", message)
+        self.assertEqual(store.get_meta(self.con, "embed_model"), "model-b")
+        self.assertTrue(store.semantic_search(self.con, [0.0, 1.0, 0.0, 0.0], 3))
+
+    def test_failed_embeddings_leave_model_unrecorded(self):
+        config.EMBED_MODEL = "model-c"
+        message = ingest.scan_library(
+            self.con, embed_fn=lambda texts, query=False: [], folder=self.library)
+        self.assertIn("Meaning-based search is off", message)
+        self.assertIsNone(store.get_meta(self.con, "embed_model"))
+        self.assertTrue(store.keyword_search(self.con, "force", 3))
+
+
 class HistoryTests(unittest.TestCase):
     def test_normalize_dict_and_tuple_history(self):
         history = [

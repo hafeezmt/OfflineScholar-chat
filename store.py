@@ -23,6 +23,7 @@ def connect(db_path=None):
                                           text TEXT, emb BLOB);
         CREATE VIRTUAL TABLE IF NOT EXISTS chunks_fts USING fts5(text);
         CREATE INDEX IF NOT EXISTS idx_chunks_path ON chunks(path);
+        CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY, value TEXT);
         """
     )
     return con
@@ -93,6 +94,21 @@ def hybrid_search(con, query, qvec, k):
             items[item["id"]] = item
     best = sorted(scores, key=scores.get, reverse=True)[:k]
     return [items[i] for i in best]
+
+
+def get_meta(con, key, default=None):
+    row = con.execute("SELECT value FROM meta WHERE key=?", (key,)).fetchone()
+    return row[0] if row else default
+
+
+def set_meta(con, key, value):
+    con.execute("INSERT OR REPLACE INTO meta VALUES (?,?)", (key, value))
+
+
+def drop_embeddings(con):
+    """Forget every stored vector, for example after switching embedding models."""
+    con.execute("UPDATE chunks SET emb=NULL")
+    con.execute("UPDATE files SET has_emb=0")
 
 
 def clear_index(con):
