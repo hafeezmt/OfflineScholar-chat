@@ -17,12 +17,17 @@ Nothing leaves the laptop. The only network use is the optional "Save a web page
 ## Setup (Fedora / Linux)
 
 ```bash
-ollama pull gemma4:e2b-it-qat
+ollama pull gemma4:e2b-it-qat            # best answers, needs about 5 GB of free RAM
+ollama pull gemma3:1b                    # lite model for 8 GB laptops (used automatically)
 ollama pull snowflake-arctic-embed:33m   # only needed for the notes feature
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 ```
+
+On a machine with less than about 5.5 GB of available RAM, OfflineScholar starts in
+**low-RAM mode** and uses `gemma3:1b` instead of the larger model. You can change the
+model any time under **Study settings** in the Chat tab.
 
 Run (two terminal tabs):
 
@@ -54,6 +59,7 @@ python cli.py ask "explain Newton's second law" --mode "Explain simply"
 - Notes list shows each file's size and whether it is indexed
 - Clear the index without deleting your files, then re-scan
 - Your chat history is kept in this browser: reopen an older conversation from the history panel, or start a new one
+- Model picker, plus automatic low-RAM mode so the laptop stays responsive
 - Example prompts for quick starts
 - Friendly messages when Ollama is not running or the model is not installed
 
@@ -61,7 +67,7 @@ python cli.py ask "explain Newton's second law" --mode "Explain simply"
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `OS_MODEL` | `gemma4:e2b-it-qat` | Chat model. Any Ollama chat model works, for example `gemma3:1b` |
+| `OS_MODEL` | `gemma4:e2b-it-qat` | Chat model. Low-RAM machines default to `gemma3:1b`; set this to force one |
 | `OS_EMBED` | `snowflake-arctic-embed:33m` | Notes search model |
 | `OS_EMBEDDINGS` | `1` | Set to `0`/`off` for keyword-only notes search |
 | `OS_TOP_K` | `4` | How many note passages to give the model |
@@ -70,6 +76,11 @@ python cli.py ask "explain Newton's second law" --mode "Explain simply"
 | `OS_HISTORY` | `8` | Messages kept from the conversation |
 | `OS_CHUNK_WORDS` | `250` | Words per indexed chunk |
 | `OS_CHUNK_OVERLAP` | `40` | Words shared by neighbouring chunks |
+| `OS_LOW_MEMORY` | auto | `1` forces low-RAM mode, `0` turns it off |
+| `OS_NUM_PREDICT` | `384` | Maximum tokens in one answer (lower is lighter) |
+| `OS_NUM_THREAD` | half the CPUs | CPU threads used by the model; lower keeps the desktop responsive |
+| `OS_NUM_BATCH` | `128` | Prompt batch size (lower uses less peak memory) |
+| `OS_KEEP_ALIVE` | `2m` | How long the model stays in memory after the last answer |
 
 ## Check the notes search works
 
@@ -84,7 +95,11 @@ python test_features.py   # chunking, uploads, history and page extraction
 - **"I can't reach Ollama"**: start it with `ollama serve`.
 - **Search misses your notes**: open My notes and press Re-scan library; if the file shows "not indexed", it could not be read (scanned PDFs have no text layer).
 - **Wrong or stale answers from notes**: press "Clear index (keeps files)" and then Re-scan library.
+- **The laptop freezes or hangs while answering**: a large model is being swapped in and out of memory. Use the `gemma3:1b` model in Study settings (or `OS_MODEL=gemma3:1b`), close unused browser tabs, and keep `OS_NUM_THREAD` low. On 8 GB machines avoid `gemma4:e2b-it-qat` while other apps are open.
 
 ## Low memory tip
 
-On an 8 GB laptop, close browser tabs you don't need. The first reply can take a minute while the model loads.
+On an 8 GB laptop, close browser tabs you don't need. OfflineScholar switches to the
+small lite model automatically, but the first reply still takes a few seconds while the
+model loads. If the desktop starts to stutter, lower `OS_NUM_THREAD` or use `python cli.py ask`
+instead of the browser interface.
