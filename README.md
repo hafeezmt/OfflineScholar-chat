@@ -30,10 +30,11 @@ curl -fsSL https://raw.githubusercontent.com/hafeezmt/OfflineScholar-chat/main/i
 ```
 
 The installer downloads the app into `~/OfflineScholar`, installs Ollama and Python if they
-are missing, downloads the small chat and notes models, and installs the `offlinescholar`
-command and desktop app. It uses only the lightweight web dependencies (the old Gradio
-interface is skipped), so setup is faster. The first run needs internet and about 2-3 GB of
-space; after that the app works offline.
+are missing, asks which chat model(s) you want, checks your free disk and RAM, and installs
+the `offlinescholar` command and desktop app. It uses only the lightweight web dependencies
+(the old Gradio interface is skipped), so setup is faster. The first run needs internet;
+the space depends on the models you choose (about 2 GB for Gemma 3 1B, up to roughly 6 GB
+with Gemma 4). After that the app works offline.
 
 The installer **does not leave OfflineScholar running**. Start it when you want it, then stop
 it when you are done:
@@ -57,11 +58,38 @@ On Windows, set the same variables before running the PowerShell command:
 ```powershell
 $env:OS_INSTALL_DIR = "D:\OfflineScholar"
 $env:OS_PORT = "7861"
+$env:OS_MODELS = "gemma3:1b qwen2.5:1.5b"
 irm https://raw.githubusercontent.com/hafeezmt/OfflineScholar-chat/main/install.ps1 | iex
 ```
 
+### Choose your models
+
+After updating the app code, the installer shows a model menu with download sizes and your
+free disk/RAM:
+
+| Model | Download | Best for |
+|---|---|---|
+| `gemma3:1b` (Gemma 3 1B) | 806 MB | Default for 8 GB laptops; fastest |
+| `qwen2.5:1.5b` (Qwen 2.5 1.5B) | 986 MB | Better reasoning, still light |
+| `gemma4:e2b-it-qat` (Gemma 4 E2B QAT) | 4.3 GB | Best answers, needs more free RAM |
+
+Enter one or more numbers, for example `1 2`. Press Enter for the default (Gemma 3 1B).
+Nothing is downloaded until you confirm. The 67 MB Snowflake notes-search model is always
+installed. If disk space is short, or Gemma 4 is selected on a low-RAM machine, the
+installer warns you and asks before continuing. You can free space or choose a smaller
+model instead.
+
+For scripted installs, choose models without the menu:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/hafeezmt/OfflineScholar-chat/main/install.sh | OS_MODELS="gemma3:1b qwen2.5:1.5b" bash
+```
+
+`OS_CHAT_MODEL` still selects a single model. If no terminal is available and neither
+variable is set, the installer stops rather than downloading without consent.
+
 For a headless or scripted install, set `OS_SKIP_DESKTOP=1` to skip the desktop app.
-`OS_SKIP_MODELS=1` skips the model downloads when they are already installed, and
+`OS_SKIP_MODELS=1` skips all model downloads when they are already installed, and
 `OS_SKIP_DEPS=1` skips system package installation.
 
 ## Start, stop and release RAM
@@ -187,7 +215,7 @@ win over the file.
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `OS_MODEL` | `gemma3:1b` in installed apps | Chat model. Low-RAM machines normally use `gemma3:1b`; set this to force one |
+| `OS_MODEL` | first model selected during install | Chat model. Low-RAM machines normally use `gemma3:1b`; set this to force one |
 | `OS_EMBED` | `snowflake-arctic-embed:33m` | Notes search model |
 | `OS_EMBEDDINGS` | `1` | Set to `0`/`off` for keyword-only notes search |
 | `OS_TOP_K` | `4` | Candidate passages retrieved before relevance filtering |

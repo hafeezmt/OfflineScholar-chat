@@ -11,6 +11,24 @@ PORT="${OS_PORT:-7860}"
 SKIP_DEPS="${OS_SKIP_DEPS:-0}"
 SKIP_MODELS="${OS_SKIP_MODELS:-0}"
 SKIP_DESKTOP="${OS_SKIP_DESKTOP:-0}"
+MODELS_REQUESTED="${OS_MODELS:-}"
+MODEL_SELECTION=()
+
+MODEL_NAMES=("gemma3:1b" "qwen2.5:1.5b" "gemma4:e2b-it-qat")
+MODEL_LABELS=("Gemma 3 1B" "Qwen 2.5 1.5B" "Gemma 4 E2B QAT")
+MODEL_SIZES_MB=(806 986 4403)
+MODEL_NOTES=(
+  "recommended for 8 GB laptops"
+  "better reasoning, still light"
+  "best answers, needs more free RAM"
+)
+EMBED_SIZE_MB=67
+DISK_MARGIN_MB=1024
+
+TTY_FD=0
+if { exec 3<>/dev/tty; } 2>/dev/null; then
+  TTY_FD=3
+fi
 
 info() {
   printf '\n==> %s\n' "$*"
@@ -135,6 +153,223 @@ install_code() {
   fi
 }
 
+human_size() {
+  local mb="${1:-0}"
+  if [ "$mb" -ge 1024 ] 2>/dev/null; then
+    awk -v n="$mb" 'BEGIN { printf "%.1f GB", n / 1024 }'
+  else
+    printf '%s MB' "$mb"
+  fi
+}
+
+model_size_mb() {
+  local name="$1" i
+  for i in "${!MODEL_NAMES[@]}"; do
+    if [ "${MODEL_NAMES[$i]}" = "$name" ]; then
+      printf '%s' "${MODEL_SIZES_MB[$i]}"
+      return
+    fi
+  done
+  printf '0'
+}
+
+disk_free_mb() {
+  local kb
+  kb="$(df -Pk "$INSTALL_DIR" 2>/dev/null | awk 'NR==2 { print $4 }')"
+  printf '%s' "$(( ${kb:-0} / 1024 ))"
+}
+
+ram_total_mb() {
+  if [ -r /proc/meminfo ]; then
+    awk '/^MemTotal:/ { printf "%d", $2 / 1024 }' /proc/meminfo
+  elif [ "$(uname -s)" = "Darwin" ]; then
+    local bytes
+    bytes="$(sysctl -n hw.memsize 2>/dev/null || printf 0)"
+    printf '%s' "$(( bytes / 1048576 ))"
+  else
+    printf '0'
+  fi
+}
+
+ram_available_mb() {
+  if [ -r /proc/meminfo ]; then
+    awk '/^MemAvailable:/ { printf "%d", $2 / 1024 }' /proc/meminfo
+  else
+    printf '0'
+  fi
+}
+
+print_model_menu() {
+  local free_mb="$1" total_mb="$2" available_mb="$3" i
+  printf '\n'
+  if [ "$free_mb" -gt 0 ]; then
+    printf 'Disk: %s free in %s\n' "$(human_size "$free_mb")" "$INSTALL_DIR"
+  else
+    printf 'Disk: could not determine free space in %s\n' "$INSTALL_DIR"
+  fi
+  if [ "$available_mb" -gt 0 ]; then
+    printf 'RAM: %s total, %s available\n' "$(human_size "$total_mb")" "$(human_size "$available_mb")"
+  else
+    printf 'RAM: %s total\n' "$(human_size "$total_mb")"
+  fi
+  printf '\nAvailable chat models (select one or more):\n'
+  for i in "${!MODEL_NAMES[@]}"; do
+    printf '  %d) %-18s %8s  %s\n' "$((i + 1))" "${MODEL_LABELS[$i]}" \
+      "$(human_size "${MODEL_SIZES_MB[$i]}")" "${MODEL_NOTES[$i]}"
+  done
+  printf '\nThe notes search model (%s) will also be installed.\n' "$(human_size "$EMBED_SIZE_MB")"
+}
+
+read_model_menu() {
+  local answer token name invalid i
+  local -a picked
+  while :; do
+    printf 'Select model numbers separated by spaces, or q to cancel [1]: ' >&3
+    if ! IFS= read -r answer <&3; then
+      fail "Could not read your model choice. Set OS_MODELS=\"gemma3:1b\" and try again."
+    fi
+    answer="${answer:-1}"
+    case "$answer" in
+      q|Q|quit|QUIT) fail "Installation cancelled. No models were downloaded." ;;
+    esac
+    invalid=0
+    picked=()
+    answer="${answer//,/ }"
+    for token in $answer; do
+      case "$token" in
+        ''|*[!0-9]*) invalid=1; break ;;
+      esac
+      if [ "$token" -lt 1 ] || [ "$token" -gt "${#MODEL_NAMES[@]}" ]; then
+        invalid=1
+        break
+      fi
+      i=$((token - 1))
+      name="${MODEL_NAMES[$i]}"
+      case " ${picked[*]} " in
+        *" $name "*) ;;
+        *) picked+=("$name") ;;
+      esac
+    done
+    if [ "$invalid" -eq 0 ] && [ "${#picked[@]}" -gt 0 ]; then
+      MODEL_SELECTION=("${picked[@]}")
+      return
+    fi
+    printf 'Enter numbers from 1 to %d.\n' "${#MODEL_NAMES[@]}" >&2
+  done
+}
+
+parse_model_list() {
+  local raw="$1" item
+  local -a requested
+  requested=()
+  raw="${raw//,/ }"
+  for item in $raw; do
+    [ -z "$item" ] && continue
+    if [ "$(model_size_mb "$item")" -eq 0 ]; then
+      printf 'Warning: no download-size estimate for %s; disk check is approximate.\n' "$item" >&2
+    fi
+    case " ${requested[*]} " in
+      *" $item "*) ;;
+      *) requested+=("$item") ;;
+    esac
+  done
+  if [ "${#requested[@]}" -eq 0 ]; then
+    fail "OS_MODELS or OS_CHAT_MODEL did not contain a model name."
+  fi
+  MODEL_SELECTION=("${requested[@]}")
+}
+
+choose_models() {
+  if [ -n "$MODELS_REQUESTED" ]; then
+    info "Using the chat model selection from OS_MODELS"
+    parse_model_list "$MODELS_REQUESTED"
+  elif [ -n "${OS_CHAT_MODEL:-}" ]; then
+    info "Using the chat model from OS_CHAT_MODEL"
+    parse_model_list "$OS_CHAT_MODEL"
+  elif [ "$SKIP_MODELS" = "1" ]; then
+    MODEL_SELECTION=("$CHAT_MODEL")
+  elif [ "$TTY_FD" -eq 3 ]; then
+    info "Choose the chat model(s) to download"
+    print_model_menu "$(disk_free_mb)" "$(ram_total_mb)" "$(ram_available_mb)"
+    read_model_menu
+    printf 'Selected: %s\n' "${MODEL_SELECTION[*]}"
+  else
+    fail "No terminal is available to choose a model. Set OS_MODELS=\"gemma3:1b\" (or OS_SKIP_MODELS=1) and run again."
+  fi
+  CHAT_MODEL="${MODEL_SELECTION[0]}"
+}
+
+check_model_requirements() {
+  local model size free_mb total_mb available_mb download_mb=0 required_mb
+  local gemma4=0 warned=0 answer
+  for model in "${MODEL_SELECTION[@]}"; do
+    size="$(model_size_mb "$model")"
+    download_mb=$((download_mb + size))
+    if [ "$model" = "gemma4:e2b-it-qat" ]; then
+      gemma4=1
+    fi
+  done
+  download_mb=$((download_mb + EMBED_SIZE_MB))
+  required_mb=$((download_mb + DISK_MARGIN_MB))
+  free_mb="$(disk_free_mb)"
+  total_mb="$(ram_total_mb)"
+  available_mb="$(ram_available_mb)"
+
+  printf '\nDownload size: %s for the selected models plus notes search\n' "$(human_size "$download_mb")"
+  printf 'Disk needed: %s including a %s safety margin\n' \
+    "$(human_size "$required_mb")" "$(human_size "$DISK_MARGIN_MB")"
+  if [ "$free_mb" -gt 0 ]; then
+    printf 'Disk available: %s\n' "$(human_size "$free_mb")"
+    if [ "$free_mb" -lt "$required_mb" ]; then
+      printf 'Warning: not enough free disk space; you are short by %s.\n' \
+        "$(human_size "$((required_mb - free_mb))")" >&2
+      warned=1
+    fi
+  else
+    printf 'Warning: could not determine free disk space; check it manually.\n' >&2
+    warned=1
+  fi
+
+  if [ "$gemma4" -eq 1 ]; then
+    if [ "$available_mb" -gt 0 ] && [ "$available_mb" -lt 5120 ]; then
+      printf 'Warning: Gemma 4 needs about 5 GB of free RAM; only %s is available.\n' \
+        "$(human_size "$available_mb")" >&2
+      warned=1
+    fi
+    if [ "$total_mb" -gt 0 ] && [ "$total_mb" -lt 8192 ]; then
+      printf 'Warning: this computer has %s RAM; Gemma 4 is happiest with 8 GB or more.\n' \
+        "$(human_size "$total_mb")" >&2
+      warned=1
+    fi
+  fi
+
+  if [ "$warned" -eq 1 ]; then
+    if [ "$TTY_FD" -eq 3 ]; then
+      printf 'Continue with the download anyway? [y/N]: ' >&3
+      if ! IFS= read -r answer <&3; then
+        answer=""
+      fi
+      case "$answer" in
+        y|Y|yes|YES) ;;
+        *) fail "Installation cancelled. No models were downloaded." ;;
+      esac
+    else
+      printf 'Continuing because the model selection was provided non-interactively.\n'
+    fi
+  fi
+}
+
+install_models() {
+  local model
+  start_ollama
+  for model in "${MODEL_SELECTION[@]}"; do
+    info "Downloading chat model ($model)"
+    ollama pull "$model"
+  done
+  info "Downloading the notes model ($EMBED_MODEL)"
+  ollama pull "$EMBED_MODEL"
+}
+
 ensure_ollama() {
   if have ollama; then
     return
@@ -220,9 +455,14 @@ ensure_desktop_toolkit() {
 }
 
 write_settings() {
+  local model models_json=""
+  for model in "${MODEL_SELECTION[@]}"; do
+    models_json="${models_json:+$models_json, }\"$model\""
+  done
   cat > "$INSTALL_DIR/settings.json" <<SETTINGS_EOF
 {
   "chat_model": "$CHAT_MODEL",
+  "chat_models": [$models_json],
   "embed_model": "$EMBED_MODEL",
   "port": $PORT
 }
@@ -341,16 +581,16 @@ main() {
   info "Installing OfflineScholar in $INSTALL_DIR"
   ensure_base_tools
   verify_python
-  ensure_desktop_toolkit
   install_code
   ensure_ollama
+  choose_models
   if [ "$SKIP_MODELS" != "1" ]; then
-    start_ollama
-    info "Downloading the chat model ($CHAT_MODEL)"
-    ollama pull "$CHAT_MODEL"
-    info "Downloading the notes model ($EMBED_MODEL)"
-    ollama pull "$EMBED_MODEL"
+    check_model_requirements
+    install_models
+  else
+    info "Skipping model downloads because OS_SKIP_MODELS=1"
   fi
+  ensure_desktop_toolkit
   install_python_packages
   write_settings
   install_cli
@@ -359,6 +599,7 @@ main() {
   remove_old_service
   stop_previous
   printf '\nInstalled in: %s\n' "$INSTALL_DIR"
+  printf 'Chat model(s): %s\n' "${MODEL_SELECTION[*]}"
   printf '\nStart OfflineScholar from any terminal:\n'
   printf '  offlinescholar up\n'
   printf '\nStop it and release RAM:\n'
