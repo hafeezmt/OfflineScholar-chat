@@ -59,7 +59,7 @@ SUPPORTED = {".txt", ".md", ".pdf", ".docx"}
 
 # Retrieval quality. Semantic-only matches below this cosine score are treated as
 # unrelated (the small embedding model gives unrelated text around 0.45-0.55).
-RAG_MIN_SCORE = _float_env("OS_RAG_MIN_SCORE", 0.62, 0.0, 1.0)
+RAG_MIN_SCORE = _float_env("OS_RAG_MIN_SCORE", 0.75, 0.0, 1.0)
 RAG_MIN_MARGIN = _float_env("OS_RAG_MIN_MARGIN", 0.06, 0.0, 1.0)
 RAG_MAX_PASSAGES = _int_env("OS_RAG_MAX_PASSAGES", 1, minimum=1)
 RAG_PASSAGE_WORDS = _int_env("OS_RAG_PASSAGE_WORDS", 90, minimum=20)
