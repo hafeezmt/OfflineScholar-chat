@@ -175,6 +175,17 @@ class ServerTests(unittest.TestCase):
         self.assertTrue(response.json()["saved"])
         self.assertEqual(response.json()["message"], "Added cells.txt")
 
+    def test_delete_note_endpoint_forwards_the_name(self):
+        with mock.patch.object(server.services, "remove_note",
+                               return_value="Removed cells.txt") as remove_note, \
+                mock.patch.object(server.services, "library_files", return_value=[]), \
+                mock.patch.object(server.services, "notes_summary",
+                                  return_value={"files": 0, "indexed": 0, "size": 0}):
+            response = self.client.delete("/api/notes", params={"name": "cells.txt"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["message"], "Removed cells.txt")
+        remove_note.assert_called_once_with("cells.txt")
+
     def test_notes_endpoints(self):
         files = [{"name": "cells.txt", "size": 64, "state": "indexed"}]
         summary = {"files": 1, "indexed": 1, "size": 64}

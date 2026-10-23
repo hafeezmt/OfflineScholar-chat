@@ -260,6 +260,12 @@ def add_note_url(request: UrlRequest):
     return _notes_payload(message)
 
 
+@app.delete("/api/notes")
+def delete_note(name: str):
+    message = services.remove_note(name)
+    return _notes_payload(message)
+
+
 @app.post("/api/notes/rescan")
 def rescan_notes():
     message = services.scan_notes()
