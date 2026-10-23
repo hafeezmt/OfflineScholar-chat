@@ -68,6 +68,13 @@ class StoreTests(unittest.TestCase):
         self.assertEqual(self.con.execute("SELECT count(*) FROM chunks").fetchone()[0], 0)
         self.assertEqual(self.con.execute("SELECT count(*) FROM files").fetchone()[0], 0)
 
+    def test_deleting_a_conversation_cascades_to_its_messages(self):
+        conversation_id = store.create_conversation(self.con, "Physics")
+        store.append_message(self.con, conversation_id, "user", "hello")
+        store.delete_conversation(self.con, conversation_id)
+        self.assertEqual(store.conversation_messages(self.con, conversation_id), [])
+        self.assertFalse(store.conversation_exists(self.con, conversation_id))
+
     def test_embeddings_of_another_size_are_skipped(self):
         store.add_chunks(self.con, "a.txt", [("p", "alpha", [1, 0, 0, 0])])
         store.add_chunks(self.con, "b.txt", [("p", "beta", [1, 0, 0, 0, 0, 0, 0, 0])])

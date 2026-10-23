@@ -16,6 +16,7 @@ def connect(db_path=None):
     con.execute("PRAGMA journal_mode=WAL")
     con.execute("PRAGMA synchronous=NORMAL")
     con.execute("PRAGMA busy_timeout=5000")
+    con.execute("PRAGMA foreign_keys=ON")
     con.executescript(
         """
         CREATE TABLE IF NOT EXISTS files(path TEXT PRIMARY KEY, mtime REAL, size INTEGER, has_emb INTEGER);
@@ -168,7 +169,6 @@ def rename_conversation(con, conversation_id, title):
 
 
 def delete_conversation(con, conversation_id):
-    con.execute("DELETE FROM messages WHERE conversation_id=?", (conversation_id,))
     con.execute("DELETE FROM conversations WHERE id=?", (conversation_id,))
     con.commit()
 
