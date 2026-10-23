@@ -208,6 +208,19 @@ class UploadRescanTests(unittest.TestCase):
         self.assertIn("not a supported type", message)
         scan.assert_not_called()
 
+    def test_upload_is_written_atomically(self):
+        message, saved = services.add_upload("notes.txt", b"hello")
+        self.assertEqual(message, "Added notes.txt")
+        self.assertEqual(saved, "notes.txt")
+        self.assertEqual((self.library / "notes.txt").read_bytes(), b"hello")
+        self.assertEqual([path.name for path in self.library.iterdir()], ["notes.txt"])
+
+    def test_upload_replaces_the_previous_version(self):
+        services.add_upload("notes.txt", b"first")
+        message, _ = services.add_upload("notes.txt", b"second")
+        self.assertEqual(message, "Updated notes.txt")
+        self.assertEqual((self.library / "notes.txt").read_bytes(), b"second")
+
     def test_saved_upload_rescans_the_library(self):
         with mock.patch.object(services, "scan_notes", return_value="Indexed 1 file") as scan:
             message = services.add_uploads([("notes.txt", b"hello")])

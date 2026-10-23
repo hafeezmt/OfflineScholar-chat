@@ -1,5 +1,7 @@
 """Operations shared by the web API, the terminal client and the Gradio app."""
+import os
 import re
+import tempfile
 from datetime import date
 from pathlib import Path
 from urllib.parse import urlparse
@@ -63,18 +65,27 @@ def add_upload(filename, data):
         return f"{name} is not a supported type", None
     if len(data) > MAX_UPLOAD_BYTES:
         return f"{name} is larger than 25 MB", None
-    config.LIBRARY_DIR.mkdir(exist_ok=True)
+    config.LIBRARY_DIR.mkdir(parents=True, exist_ok=True)
     dest = config.LIBRARY_DIR / name
+    temp_path = None
     try:
-        if dest.exists():
-            if dest.read_bytes() == data:
-                return f"{name} is already in the library", name
-            dest.write_bytes(data)
-            return f"Updated {name}", name
-        dest.write_bytes(data)
-        return f"Added {name}", name
+        exists = dest.exists()
+        if exists and dest.read_bytes() == data:
+            return f"{name} is already in the library", name
+        fd, temp_path = tempfile.mkstemp(prefix=".upload-", dir=config.LIBRARY_DIR)
+        with os.fdopen(fd, "wb") as temp:
+            temp.write(data)
+        os.replace(temp_path, dest)
+        temp_path = None
+        return (f"Updated {name}" if exists else f"Added {name}"), name
     except OSError as e:
         return f"Could not save {name}: {e}", None
+    finally:
+        if temp_path:
+            try:
+                os.unlink(temp_path)
+            except OSError:
+                pass
 
 
 def add_uploads(files):
