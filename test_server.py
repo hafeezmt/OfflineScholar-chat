@@ -56,6 +56,12 @@ class ServerTests(unittest.TestCase):
 
         self.assertEqual(self.client.delete(f"/api/conversations/{conversation_id}").status_code, 200)
         self.assertEqual(self.client.get(f"/api/conversations/{conversation_id}").status_code, 404)
+        self.assertEqual(self.client.delete(f"/api/conversations/{conversation_id}").status_code, 404)
+
+    def test_deleting_an_unknown_conversation_returns_404(self):
+        response = self.client.delete("/api/conversations/99999")
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.json()["detail"], "Conversation not found")
 
     def test_chat_streams_and_saves_messages(self):
         def fake_stream(history, message, mode, language, use_notes, model, passages=None, use_web=False, web_sink=None):

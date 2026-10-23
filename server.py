@@ -156,6 +156,8 @@ def rename_conversation(conversation_id: int, request: RenameRequest):
 def remove_conversation(conversation_id: int):
     con = store.connect()
     try:
+        if not store.conversation_exists(con, conversation_id):
+            raise HTTPException(status_code=404, detail="Conversation not found")
         store.delete_conversation(con, conversation_id)
     finally:
         con.close()
