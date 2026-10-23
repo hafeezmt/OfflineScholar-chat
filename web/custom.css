@@ -1,0 +1,91 @@
+/* ============================================================
+   OfflineScholar custom theme
+   ------------------------------------------------------------
+   This is the ONLY file you need to edit to change how the app
+   looks. It is loaded after web/style.css, so anything here wins.
+
+   All colours are CSS variables. Change a value, save, then
+   refresh the browser with Ctrl+Shift+R (or Cmd+Shift+R on Mac).
+   ============================================================ */
+
+/* ---------- Light theme ---------- */
+:root {
+  --bg: #eef4ff;            /* page background */
+  --bg-accent: #dfeaff;     /* glow behind the page */
+  --surface: #ffffff;       /* cards and header */
+  --panel: #f6f9ff;         /* message bubbles / file rows */
+  --panel-strong: #eef4ff;
+  --text: #0f172a;          /* main text */
+  --muted: #64748b;         /* secondary text */
+  --line: #e3ebf6;          /* borders */
+  --line-strong: #cfdcf0;
+  --brand: #2563eb;         /* main accent: buttons, links, logo */
+  --brand-strong: #1d4ed8;
+  --brand-soft: #eaf1ff;
+  --brand-contrast: #ffffff;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #dc2626;
+  --danger-soft: #fee2e2;
+
+  /* Shape */
+  --radius-lg: 24px;
+  --radius: 16px;
+  --radius-sm: 11px;
+}
+
+/* ---------- Dark theme ---------- */
+[data-theme="dark"] {
+  --bg: #060d19;
+  --bg-accent: #0b1930;
+  --surface: #0d1728;
+  --panel: #0a1422;
+  --panel-strong: #0f1d33;
+  --text: #e7eefb;
+  --muted: #93a4ba;
+  --line: #1b2a41;
+  --line-strong: #263a58;
+  --brand: #3b82f6;
+  --brand-strong: #2563eb;
+  --brand-soft: #14233c;
+  --brand-contrast: #ffffff;
+  --success: #34d399;
+  --warning: #fbbf24;
+  --danger: #f87171;
+  --danger-soft: #2a1620;
+}
+
+/* ---------- Optional extras (uncomment to try) ---------- */
+
+/* A different font:
+body {
+  font-family: "Source Code Pro", ui-monospace, monospace;
+}
+*/
+
+/* Wider app on big screens:
+.app {
+  max-width: 1440px;
+}
+*/
+
+/* Rounder / sharper corners everywhere:
+:root {
+  --radius-lg: 12px;
+  --radius: 10px;
+  --radius-sm: 7px;
+}
+*/
+
+/* Accent presets: replace the three --brand values in :root and
+   [data-theme="dark"] above.
+
+   Emerald:
+     --brand: #059669;  --brand-strong: #047857;  --brand-soft: #ecfdf5;
+
+   Violet:
+     --brand: #7c3aed;  --brand-strong: #6d28d9;  --brand-soft: #f5f3ff;
+
+   Rose:
+     --brand: #e11d48;  --brand-strong: #be123c;  --brand-soft: #fff1f2;
+*/

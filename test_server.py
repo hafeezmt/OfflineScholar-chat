@@ -28,6 +28,7 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(page.status_code, 200)
         self.assertIn("OfflineScholar", page.text)
         self.assertEqual(self.client.get("/static/app.js").status_code, 200)
+        self.assertEqual(self.client.get("/static/custom.css").status_code, 200)
         self.assertEqual(self.client.get("/favicon.svg").status_code, 200)
 
     def test_status_reports_models_and_modes(self):
