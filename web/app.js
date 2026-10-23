@@ -925,7 +925,7 @@ async function uploadFiles(fileList) {
   try {
     const data = await api("/api/notes/upload", { method: "POST", body: form });
     renderNotes(data);
-    if ((data.files || []).length) applyNotesPreference(true);
+    if (data.saved) applyNotesPreference(true);
     showNotesStatus(firstLine(data.message));
     toast(firstLine(data.message));
     await loadStatus();
