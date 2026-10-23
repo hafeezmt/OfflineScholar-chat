@@ -950,11 +950,24 @@ svg {
   max-width: 150px;
   border: 0;
   outline: none;
-  background: transparent;
+  background: var(--panel);
   color: var(--text);
   font-size: 0.76rem;
   font-weight: 600;
   cursor: pointer;
+  color-scheme: inherit;
+}
+
+.select option {
+  background: var(--panel);
+  color: var(--text);
+}
+
+[data-theme="dark"] .select select,
+[data-theme="dark"] .select option {
+  color-scheme: dark;
+  background: var(--panel);
+  color: var(--text);
 }
 
 .model-select select {
@@ -989,6 +1002,13 @@ svg {
   background: var(--brand);
   border-color: var(--brand);
   color: #fff;
+}
+
+#notesToggle[aria-pressed="true"]::after {
+  content: "✓";
+  font-size: 0.68rem;
+  font-weight: 700;
+  margin-left: 1px;
 }
 
 .send-wrap {
@@ -1330,6 +1350,32 @@ svg {
 }
 
 /* ---------- Responsive ---------- */
+
+@media (max-width: 1120px) {
+  .hint,
+  .select span {
+    display: none;
+  }
+
+  .composer-row {
+    flex-wrap: nowrap;
+  }
+
+  .composer-tools {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .select {
+    min-width: 0;
+  }
+
+  .select select {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+  }
+}
 
 @media (max-width: 960px) {
   body {
