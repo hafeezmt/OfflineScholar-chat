@@ -898,7 +898,15 @@ function renderNotes(data) {
     badge.className = "badge " + info.kind;
     badge.textContent = info.text;
 
-    item.append(icon, meta, badge);
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "file-delete";
+    remove.title = "Remove from library";
+    remove.setAttribute("aria-label", "Remove " + file.name);
+    remove.innerHTML = "&times;";
+    remove.addEventListener("click", () => removeNote(file.name));
+
+    item.append(icon, meta, badge, remove);
     el.fileList.append(item);
   }
 }
@@ -983,6 +991,20 @@ async function clearNotes() {
     renderNotes(data);
     showNotesStatus(firstLine(data.message));
     toast("Index cleared");
+  } catch (error) {
+    showNotesStatus(friendlyError(error.message));
+  }
+}
+
+async function removeNote(name) {
+  if (!window.confirm('Remove "' + name + '" from the library?')) return;
+  showNotesStatus("Removing " + name + "\u2026");
+  try {
+    const data = await api("/api/notes?name=" + encodeURIComponent(name), { method: "DELETE" });
+    renderNotes(data);
+    showNotesStatus(firstLine(data.message));
+    toast(firstLine(data.message));
+    await loadStatus();
   } catch (error) {
     showNotesStatus(friendlyError(error.message));
   }
