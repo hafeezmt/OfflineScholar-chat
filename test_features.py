@@ -211,8 +211,9 @@ class UploadRescanTests(unittest.TestCase):
 
     def test_unsupported_upload_does_not_rescan_the_library(self):
         with mock.patch.object(services, "scan_notes") as scan:
-            message = services.add_uploads([("program.exe", b"nope")])
+            message, saved = services.add_uploads([("program.exe", b"nope")])
         self.assertIn("not a supported type", message)
+        self.assertFalse(saved)
         scan.assert_not_called()
 
     def test_upload_is_written_atomically(self):
@@ -230,9 +231,10 @@ class UploadRescanTests(unittest.TestCase):
 
     def test_saved_upload_rescans_the_library(self):
         with mock.patch.object(services, "scan_notes", return_value="Indexed 1 file") as scan:
-            message = services.add_uploads([("notes.txt", b"hello")])
+            message, saved = services.add_uploads([("notes.txt", b"hello")])
         self.assertIn("Added notes.txt", message)
         self.assertIn("Indexed 1 file", message)
+        self.assertTrue(saved)
         scan.assert_called_once()
 
 

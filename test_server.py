@@ -160,6 +160,21 @@ class ServerTests(unittest.TestCase):
             response = self.client.post("/api/chat", json={"message": "hi", "model": "missing"})
         self.assertIn("ollama pull missing", response.text)
 
+    def test_upload_response_reports_whether_files_were_saved(self):
+        files = [{"name": "cells.txt", "size": 2, "state": "indexed"}]
+        with mock.patch.object(server.services, "add_uploads",
+                               return_value=("Added cells.txt", True)), \
+                mock.patch.object(server.services, "library_files", return_value=files), \
+                mock.patch.object(server.services, "notes_summary",
+                                  return_value={"files": 1, "indexed": 1, "size": 2}):
+            response = self.client.post(
+                "/api/notes/upload",
+                files=[("files", ("cells.txt", b"hi", "text/plain"))],
+            )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["saved"])
+        self.assertEqual(response.json()["message"], "Added cells.txt")
+
     def test_notes_endpoints(self):
         files = [{"name": "cells.txt", "size": 64, "state": "indexed"}]
         summary = {"files": 1, "indexed": 1, "size": 64}

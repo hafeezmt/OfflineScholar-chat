@@ -97,9 +97,9 @@ def add_uploads(files):
         messages.append(message)
         saved = saved or saved_name is not None
     if not messages:
-        return "Choose one or more files first."
+        return "Choose one or more files first.", False
     summary = "; ".join(messages)
-    return summary + ("\n" + scan_notes() if saved else "")
+    return summary + ("\n" + scan_notes() if saved else ""), saved
 
 
 def add_url(url):

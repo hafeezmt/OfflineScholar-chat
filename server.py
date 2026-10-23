@@ -226,7 +226,7 @@ def chat(request: ChatRequest):
     )
 
 
-def _notes_payload(message=None):
+def _notes_payload(message=None, saved=None):
     payload = {
         "files": services.library_files(),
         "summary": services.notes_summary(),
@@ -234,6 +234,8 @@ def _notes_payload(message=None):
     }
     if message:
         payload["message"] = message
+    if saved is not None:
+        payload["saved"] = bool(saved)
     return payload
 
 
@@ -248,8 +250,8 @@ async def upload_notes(files: list[UploadFile] = File(...)):
     for f in files:
         data = await f.read(services.MAX_UPLOAD_BYTES + 1)
         payload.append((f.filename, data))
-    message = await run_in_threadpool(services.add_uploads, payload)
-    return _notes_payload(message)
+    message, saved = await run_in_threadpool(services.add_uploads, payload)
+    return _notes_payload(message, saved)
 
 
 @app.post("/api/notes/url")
