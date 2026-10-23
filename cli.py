@@ -7,6 +7,7 @@ import config
 import ingest
 import llm
 import search
+import services
 import store
 
 
@@ -56,7 +57,7 @@ def cmd_search(args):
 
 def cmd_ask(args):
     model = args.model or llm.default_model()
-    passages = [] if args.no_notes else search.find(args.message)
+    passages = [] if args.no_notes else services.retrieve(args.message)
     try:
         for token in llm.chat_stream([], args.message, args.mode, args.language, passages, model=model):
             print(token, end="", flush=True)
