@@ -63,6 +63,17 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(response.status_code, 404)
         self.assertEqual(response.json()["detail"], "Conversation not found")
 
+    def test_chat_rejects_an_oversized_message(self):
+        with mock.patch.object(config, "MAX_MESSAGE_CHARS", 10):
+            response = self.client.post("/api/chat", json={"message": "x" * 11})
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("too long", response.json()["detail"])
+        con = store.connect(self.db)
+        try:
+            self.assertEqual(store.list_conversations(con), [])
+        finally:
+            con.close()
+
     def test_chat_streams_and_saves_messages(self):
         def fake_stream(history, message, mode, language, use_notes, model, passages=None, use_web=False, web_sink=None):
             self.assertEqual(message, "What is chlorophyll?")

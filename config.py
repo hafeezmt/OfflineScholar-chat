@@ -74,6 +74,7 @@ TEMPERATURE = _float_env("OS_TEMPERATURE", 0.2)
 TOP_P = _float_env("OS_TOP_P", 0.9, 0.0, 1.0)
 REPEAT_PENALTY = _float_env("OS_REPEAT_PENALTY", 1.05, 1.0, 2.0)
 HISTORY_LIMIT = _int_env("OS_HISTORY", 8, minimum=0)
+MAX_MESSAGE_CHARS = _int_env("OS_MAX_MESSAGE_CHARS", 20_000, minimum=200)
 
 # Keeps CPU and memory use in check on small laptops (the UI stays responsive).
 NUM_PREDICT = _int_env("OS_NUM_PREDICT", 384, minimum=32)

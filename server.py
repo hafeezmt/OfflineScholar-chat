@@ -169,6 +169,11 @@ def chat(request: ChatRequest):
     message = request.message.strip()
     if not message:
         raise HTTPException(status_code=400, detail="Message cannot be empty")
+    if len(message) > config.MAX_MESSAGE_CHARS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Message is too long (limit {config.MAX_MESSAGE_CHARS:,} characters).",
+        )
     model = request.model or llm.default_model(_chat_models())
 
     con = store.connect()
