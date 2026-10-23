@@ -7,7 +7,7 @@ import webbrowser
 from tkinter import font as tkfont
 from tkinter import ttk
 
-import manage
+from . import manage
 
 
 class DesktopApp:

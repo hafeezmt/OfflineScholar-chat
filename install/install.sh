@@ -132,7 +132,7 @@ install_code() {
     git -C "$INSTALL_DIR" reset --hard FETCH_HEAD
     return
   fi
-  if [ -f "$INSTALL_DIR/app.py" ]; then
+  if [ -f "$INSTALL_DIR/app.py" ] || [ -f "$INSTALL_DIR/offlinescholar/app.py" ]; then
     info "Updating OfflineScholar files in $INSTALL_DIR"
     local tmp
     tmp="$(mktemp -d)"
@@ -472,9 +472,9 @@ SETTINGS_EOF
 install_cli() {
   local bin_dir="$HOME/.local/bin"
   mkdir -p "$bin_dir"
-  chmod +x "$INSTALL_DIR/offlinescholar"
-  ln -sf "$INSTALL_DIR/offlinescholar" "$bin_dir/offlinescholar"
-  ln -sf "$INSTALL_DIR/offlinescholar" "$bin_dir/offlinescolar"
+  chmod +x "$INSTALL_DIR/install/offlinescholar"
+  ln -sf "$INSTALL_DIR/install/offlinescholar" "$bin_dir/offlinescholar"
+  ln -sf "$INSTALL_DIR/install/offlinescholar" "$bin_dir/offlinescolar"
   case ":$PATH:" in
     *":$bin_dir:"*) ;;
     *)
@@ -494,7 +494,7 @@ install_cli() {
 write_start_script() {
   cat > "$INSTALL_DIR/start.sh" <<START_EOF
 #!/usr/bin/env bash
-exec "$INSTALL_DIR/offlinescholar" up "\$@"
+exec "$INSTALL_DIR/install/offlinescholar" up "\$@"
 START_EOF
   chmod +x "$INSTALL_DIR/start.sh"
 }
@@ -507,7 +507,8 @@ install_desktop_linux() {
 Type=Application
 Name=OfflineScholar
 Comment=Private offline study assistant
-Exec="$INSTALL_DIR/venv/bin/python" "$INSTALL_DIR/desktop.py"
+Exec="$INSTALL_DIR/venv/bin/python" -m offlinescholar.desktop
+Path=$INSTALL_DIR
 Icon=$INSTALL_DIR/web/favicon.svg
 Terminal=false
 Categories=Education;Utility;
@@ -538,7 +539,7 @@ install_desktop_macos() {
 PLIST_EOF
   cat > "$app/Contents/MacOS/OfflineScholar" <<MAC_EOF
 #!/bin/bash
-exec "$INSTALL_DIR/venv/bin/python" "$INSTALL_DIR/desktop.py"
+cd "$INSTALL_DIR" && exec "$INSTALL_DIR/venv/bin/python" -m offlinescholar.desktop
 MAC_EOF
   chmod +x "$app/Contents/MacOS/OfflineScholar"
 }
@@ -565,8 +566,8 @@ remove_old_service() {
 }
 
 stop_previous() {
-  if [ -x "$INSTALL_DIR/venv/bin/python" ] && [ -f "$INSTALL_DIR/manage.py" ]; then
-    "$INSTALL_DIR/venv/bin/python" "$INSTALL_DIR/manage.py" stop >/dev/null 2>&1 || true
+  if [ -x "$INSTALL_DIR/venv/bin/python" ] && [ -f "$INSTALL_DIR/offlinescholar/manage.py" ]; then
+    (cd "$INSTALL_DIR" && "$INSTALL_DIR/venv/bin/python" -m offlinescholar.manage stop >/dev/null 2>&1) || true
   fi
 }
 

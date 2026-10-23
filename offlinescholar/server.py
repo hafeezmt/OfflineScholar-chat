@@ -14,10 +14,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from starlette.concurrency import run_in_threadpool
 
-import config
-import llm
-import services
-import store
+from . import config, llm, services, store
 
 WEB_DIR = config.BASE / "web"
 logger = logging.getLogger("offlinescholar")

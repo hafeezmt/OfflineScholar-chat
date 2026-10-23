@@ -6,7 +6,7 @@ import os
 import sys
 from pathlib import Path
 
-BASE = Path(__file__).resolve().parent
+BASE = Path(__file__).resolve().parent.parent
 if str(BASE) not in sys.path:
     sys.path.insert(0, str(BASE))
 
@@ -14,7 +14,7 @@ if str(BASE) not in sys.path:
 def main():
     import uvicorn
 
-    import server
+    from offlinescholar import server
 
     uvicorn.run(
         server.app,

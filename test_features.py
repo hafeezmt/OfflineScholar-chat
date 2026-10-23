@@ -5,18 +5,13 @@ from pathlib import Path
 from unittest import mock
 
 try:
-    import gradio_app as app
+    from offlinescholar import gradio_app as app
 except ModuleNotFoundError as error:
     if (error.name or "").split(".")[0] != "gradio":
         raise
     app = None
 
-import config
-import ingest
-import llm
-import services
-import store
-import webpages
+from offlinescholar import config, ingest, llm, services, store, webpages
 
 
 def temp_db(tmp):

@@ -3,10 +3,7 @@ import hashlib
 import tempfile
 from pathlib import Path
 
-import config
-import ingest
-import search
-import store
+from offlinescholar import config, ingest, search, store
 
 
 def fake_embed(texts, query=False):

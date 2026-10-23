@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-import manage
+from offlinescholar import manage
 
 
 class SettingsTests(unittest.TestCase):

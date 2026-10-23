@@ -6,9 +6,7 @@ from unittest import mock
 
 from fastapi.testclient import TestClient
 
-import config
-import server
-import store
+from offlinescholar import config, server, store
 
 
 class ServerTests(unittest.TestCase):

@@ -8,9 +8,7 @@ trusted. This keeps RAG from injecting noise into every answer.
 import inspect
 import re
 
-import config
-import llm
-import store
+from . import config, llm, store
 
 
 def _accepts_query_arg(embed_fn):

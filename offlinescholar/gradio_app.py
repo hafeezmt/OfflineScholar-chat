@@ -5,12 +5,7 @@ from pathlib import Path
 
 import gradio as gr
 
-import config
-import ingest
-import llm
-import search
-import store
-import webpages
+from . import config, ingest, llm, search, store, webpages
 
 config.LIBRARY_DIR.mkdir(exist_ok=True)
 

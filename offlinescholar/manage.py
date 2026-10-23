@@ -12,7 +12,7 @@ import urllib.request
 import webbrowser
 from pathlib import Path
 
-BASE = Path(__file__).resolve().parent
+BASE = Path(__file__).resolve().parent.parent
 PID_FILE = BASE / "server.pid"
 LOG_FILE = BASE / "server.log"
 SETTINGS_FILE = BASE / "settings.json"
@@ -79,19 +79,23 @@ def _pid_alive(pid):
 def _pid_is_ours(pid):
     if os.name == "nt":
         return True
-    proc_file = Path(f"/proc/{pid}/cmdline")
-    if proc_file.exists():
+    proc_dir = Path(f"/proc/{pid}")
+    if proc_dir.exists():
         try:
-            command = proc_file.read_bytes().decode("utf-8", "ignore")
+            command = (proc_dir / "cmdline").read_bytes().decode("utf-8", "ignore")
+            cwd = Path(os.readlink(proc_dir / "cwd"))
         except OSError:
             return False
-        return "app.py" in command and str(BASE) in command
+        launches_app = "offlinescholar.app" in command or "app.py" in command
+        return launches_app and (str(BASE) in command or cwd == BASE)
     try:
         result = subprocess.run(["ps", "-p", str(pid), "-o", "command="],
                                 capture_output=True, text=True, check=False)
     except OSError:
         return False
-    return "app.py" in result.stdout and str(BASE) in result.stdout
+    command = result.stdout
+    launches_app = "offlinescholar.app" in command or "app.py" in command
+    return launches_app and str(BASE) in command
 
 
 def _clear_pid():
@@ -143,7 +147,7 @@ def start(port=None, open_browser=False):
     environment.setdefault("OS_EMBED", settings["embed_model"])
     environment["OS_PORT"] = str(port)
 
-    arguments = [sys.executable, str(BASE / "app.py")]
+    arguments = [sys.executable, "-m", "offlinescholar.app"]
     options = {
         "cwd": str(BASE),
         "env": environment,

@@ -4,8 +4,7 @@ import io
 import unittest
 from unittest import mock
 
-import cli
-import llm
+from offlinescholar import cli, llm
 
 
 class CliTests(unittest.TestCase):

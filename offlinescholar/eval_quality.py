@@ -7,8 +7,7 @@ Usage:
 import argparse
 import time
 
-import llm
-import services
+from . import llm, services
 
 CASES = [
     {

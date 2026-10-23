@@ -3,12 +3,7 @@ import argparse
 import sys
 from pathlib import Path
 
-import config
-import ingest
-import llm
-import search
-import services
-import store
+from . import config, ingest, llm, search, services, store
 
 
 def index_notes():
