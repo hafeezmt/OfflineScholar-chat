@@ -341,9 +341,11 @@ offlinescholar stop
 offlinescholar up
 ```
 
-Then choose **Qwen 2.5 0.5B** in the Model menu; the app remembers that choice. It is about
-400 MB instead of 806 MB and is much faster on a slow CPU. Keep the browser to one tab and
-close other heavy apps (especially Chrome and Spotify) while you use it.
+On a low-RAM machine the app automatically picks **Qwen 2.5 0.5B** after a restart, because
+it is the smallest installed chat model. You can also choose it in the Model menu; the app
+remembers that choice. It is about 400 MB instead of 806 MB and is much faster on a slow CPU.
+Keep the browser to one tab and close other heavy apps (especially Chrome and Spotify) while
+you use it.
 
 Answers are shorter on low-RAM machines (about 140 words) to avoid long waits. If you need a
 longer answer, raise `OS_NUM_PREDICT`, or use `OS_NUM_PREDICT=384 offlinescholar restart`.

@@ -43,6 +43,23 @@ class SettingsTests(unittest.TestCase):
         self.assertEqual(settings["port"], 7860)
 
 
+class ModelOverrideTests(unittest.TestCase):
+    def test_low_memory_auto_picks_for_the_default_model(self):
+        with mock.patch.object(manage.config, "LOW_MEMORY", True):
+            self.assertIsNone(manage._model_override({"chat_model": manage.DEFAULT_CHAT_MODEL}))
+
+    def test_an_explicit_choice_is_respected(self):
+        with mock.patch.object(manage.config, "LOW_MEMORY", True):
+            self.assertEqual(
+                manage._model_override({"chat_model": "qwen2.5:1.5b"}), "qwen2.5:1.5b")
+
+    def test_high_memory_keeps_the_settings_model(self):
+        with mock.patch.object(manage.config, "LOW_MEMORY", False):
+            self.assertEqual(
+                manage._model_override({"chat_model": manage.DEFAULT_CHAT_MODEL}),
+                manage.DEFAULT_CHAT_MODEL)
+
+
 class ProcessTests(unittest.TestCase):
     def test_current_process_is_alive(self):
         self.assertTrue(manage._pid_alive(os.getpid()))

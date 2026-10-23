@@ -12,6 +12,8 @@ import urllib.request
 import webbrowser
 from pathlib import Path
 
+import config
+
 BASE = Path(__file__).resolve().parent
 PID_FILE = BASE / "server.pid"
 LOG_FILE = BASE / "server.log"
@@ -120,6 +122,13 @@ def _wait_for_status(port, timeout, running=True, process=None):
     return fetch_status(port)
 
 
+def _model_override(settings):
+    """Let low-RAM machines auto-pick a smaller installed model by default."""
+    if config.LOW_MEMORY and settings["chat_model"] == DEFAULT_CHAT_MODEL:
+        return None
+    return settings["chat_model"]
+
+
 def start(port=None, open_browser=False):
     settings = load_settings()
     port = port or settings["port"]
@@ -138,7 +147,9 @@ def start(port=None, open_browser=False):
 
     _clear_pid()
     environment = os.environ.copy()
-    environment.setdefault("OS_MODEL", settings["chat_model"])
+    override = _model_override(settings)
+    if override:
+        environment.setdefault("OS_MODEL", override)
     environment.setdefault("OS_EMBED", settings["embed_model"])
     environment["OS_PORT"] = str(port)
 
