@@ -11,7 +11,7 @@ config.LIBRARY_DIR.mkdir(exist_ok=True)
 
 OLLAMA_HELP = "I can't reach Ollama. Start it in another terminal with:  ollama serve"
 
-ASSETS = config.BASE / "assets"
+ASSETS = config.PACKAGE_DIR / "assets"
 CSS = ""
 if (ASSETS / "style.css").exists():
     CSS = (ASSETS / "style.css").read_text(encoding="utf-8")

@@ -16,7 +16,7 @@ from starlette.concurrency import run_in_threadpool
 
 from . import config, llm, services, store
 
-WEB_DIR = config.BASE / "web"
+WEB_DIR = config.PACKAGE_DIR / "web"
 logger = logging.getLogger("offlinescholar")
 
 
