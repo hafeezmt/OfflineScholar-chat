@@ -238,6 +238,46 @@ class UploadRescanTests(unittest.TestCase):
         scan.assert_called_once()
 
 
+class NoteRemovalTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+        self.library = self.root / "library"
+        self.library.mkdir()
+        self._old_library = config.LIBRARY_DIR
+        self._old_db = config.DB_PATH
+        config.LIBRARY_DIR = self.library
+        config.DB_PATH = self.root / "test.db"
+
+    def tearDown(self):
+        config.LIBRARY_DIR = self._old_library
+        config.DB_PATH = self._old_db
+        self.tmp.cleanup()
+
+    def test_removes_the_file_and_its_index_rows(self):
+        note = self.library / "cells.txt"
+        note.write_text("Cells are the unit of life.")
+        con = store.connect(config.DB_PATH)
+        try:
+            ingest.scan_library(con, folder=self.library)
+        finally:
+            con.close()
+        message = services.remove_note("cells.txt")
+        self.assertEqual(message, "Removed cells.txt.")
+        self.assertFalse(note.exists())
+        self.assertEqual(services.library_files(), [])
+
+    def test_removing_an_unknown_note_is_reported(self):
+        self.assertEqual(services.remove_note("missing.txt"), "missing.txt is not in the library.")
+
+    def test_path_arguments_cannot_escape_the_library(self):
+        outside = self.root / "secret.txt"
+        outside.write_text("do not delete")
+        message = services.remove_note("../secret.txt")
+        self.assertIn("not in the library", message)
+        self.assertTrue(outside.exists())
+
+
 class WebpageTests(unittest.TestCase):
     def test_parser_keeps_block_breaks_and_unskips_text(self):
         p = webpages._Text()

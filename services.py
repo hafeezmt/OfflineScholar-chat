@@ -109,6 +109,28 @@ def add_url(url):
     return message
 
 
+def remove_note(name):
+    """Remove one file from the library and its index. Returns a friendly message."""
+    wanted = Path(name or "").name
+    if not wanted:
+        return "Choose a note to remove."
+    matches = [path for path in ingest.library_files() if path.name == wanted]
+    if not matches:
+        return f"{wanted} is not in the library."
+    path = matches[0]
+    con = store.connect()
+    try:
+        try:
+            path.unlink()
+        except OSError as e:
+            return f"Could not remove {wanted}: {e}"
+        store.remove_file(con, str(path))
+        con.commit()
+    finally:
+        con.close()
+    return f"Removed {wanted}."
+
+
 def clear_notes_index():
     con = store.connect()
     try:
