@@ -227,6 +227,7 @@ win over the file.
 | `OS_NUM_CTX` | `2048` | Context window for the chat model |
 | `OS_TEMPERATURE` | `0.2` | Answer randomness, between 0 and 2 |
 | `OS_HISTORY` | `8` | Messages kept from the conversation |
+| `OS_MAX_MESSAGE_CHARS` | `20000` | Longest question the server accepts |
 | `OS_CHUNK_WORDS` | `160` | Words per indexed chunk |
 | `OS_CHUNK_OVERLAP` | `30` | Words shared by neighbouring chunks |
 | `OS_LOW_MEMORY` | auto | `1` forces low-RAM mode, `0` turns it off |
@@ -246,9 +247,10 @@ win over the file.
 - Study modes: just chat, explain simply, homework helper, essay outline, quiz me, summarize my text
 - Replies in English, Nigerian Pidgin or Hausa
 - Grounded notes answers: add .pdf, .docx, .txt, .md files or saved web pages, switch on "Use notes", and relevant passages are quoted with `[1]` citations; unrelated notes are ignored
+- "Use notes" switches itself on after a successful upload or a latest-upload question, so the next answer can use the new material
 - Answers anything: when the notes do not cover a question, the app says so and answers from general knowledge; current or time-sensitive questions get a best-effort answer with an offline caveat
 - Latest-upload summaries and notes quizzes read the newest file, even when the question has no exact keywords
-- Notes library drawer with each file's size and index state, plus re-scan and clear
+- Notes library drawer with each file's size and index state, plus re-scan, per-file removal and clear
 - Conversation history in a sidebar: search, rename or delete chats, and reopen them later
 - Model picker, plus automatic low-RAM mode so the laptop stays responsive
 - Light and dark themes, a mobile layout, and example prompts for quick starts
