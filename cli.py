@@ -55,14 +55,15 @@ def cmd_search(args):
 
 
 def cmd_ask(args):
+    model = args.model or llm.default_model()
     passages = [] if args.no_notes else search.find(args.message)
     try:
-        for token in llm.chat_stream([], args.message, args.mode, args.language, passages, model=args.model):
+        for token in llm.chat_stream([], args.message, args.mode, args.language, passages, model=model):
             print(token, end="", flush=True)
     except Exception as e:
         err = str(e).lower()
         if "not found" in err:
-            print(f"\nThe model is not installed. Run: ollama pull {config.CHAT_MODEL}")
+            print(f"\nThe model is not installed. Run: ollama pull {model}")
         elif "connect" in err or "refused" in err:
             print("\nCannot reach Ollama. Start it with: ollama serve")
         else:
@@ -90,7 +91,8 @@ def main(argv=None):
     p_ask.add_argument("--mode", default="Just chat", choices=list(llm.MODES))
     p_ask.add_argument("--language", default="English", choices=list(llm.LANGUAGES))
     p_ask.add_argument("--no-notes", action="store_true", help="do not search the library")
-    p_ask.add_argument("--model", default=llm.default_model(), help="Ollama chat model to use")
+    p_ask.add_argument("--model", default=None,
+                       help="Ollama chat model to use (default: the installed model)")
 
     args = parser.parse_args(argv)
     return {
