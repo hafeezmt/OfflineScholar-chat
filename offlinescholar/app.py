@@ -1,6 +1,6 @@
 """OfflineScholar launcher: starts the custom FastAPI web app.
 
-The original Gradio interface is still available in gradio_app.py.
+The original Gradio interface is still available in offlinescholar.gradio_app.
 """
 import os
 import sys

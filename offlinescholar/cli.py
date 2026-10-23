@@ -42,7 +42,7 @@ def cmd_list(args):
 def cmd_search(args):
     passages = search.find(args.query)
     if not passages:
-        print("No matching notes. Try `python cli.py index` after adding files.")
+        print("No matching notes. Try `python -m offlinescholar.cli index` after adding files.")
         return 1
     for i, p in enumerate(passages, 1):
         print(f"[{i}] {Path(p['path']).name} ({p['label']})")

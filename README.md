@@ -2,6 +2,14 @@
 
 Chat with an AI for your studies **with no internet**, the way you would chat with ChatGPT or Claude. Ask questions, get homework explained, plan essays, practise quizzes. Everything runs on your own laptop.
 
+## Project layout
+
+- `offlinescholar/` — the application package: FastAPI server, terminal tools, web interface and assets
+- `tests/` — automated tests for indexing, retrieval, the API and the start/stop manager
+- `install/` — the Linux/macOS and Windows installers plus the `offlinescholar` launcher
+- `library/` — your notes and saved pages (created on first run)
+- `settings.json`, `scholar.db`, `server.pid` and logs — local runtime data, created at the repository root
+
 ## Why it exists
 
 Students often need help with assignments and research exactly when data is expensive or the network is down. OfflineScholar moves the AI onto the laptop so it works anywhere, for free.
@@ -11,7 +19,7 @@ Students often need help with assignments and research exactly when data is expe
 - **Gemma 3 1B** (`gemma3:1b`) or **Qwen 2.5 1.5B** (`qwen2.5:1.5b`) runs locally through **Ollama** on 8 GB laptops; **Gemma 4** (`gemma4:e2b-it-qat`) gives the strongest answers when more RAM is free.
 - **Snowflake Arctic Embed** (`snowflake-arctic-embed:33m`), Snowflake's open-weight embedding model, also local through Ollama. It powers the optional "search my notes" feature.
 - A small FastAPI server with a hand-written offline web interface (no CDN, no cloud), plus SQLite for chats and the notes index.
-- The original Gradio interface is optional; see `gradio_app.py` if you prefer it.
+- The original Gradio interface is optional; see `offlinescholar/gradio_app.py` if you prefer it.
 
 Nothing leaves the laptop. The only network feature is the optional "Save a web page" button; the app itself answers offline.
 
@@ -20,13 +28,13 @@ Nothing leaves the laptop. The only network feature is the optional "Save a web 
 Windows 10/11, in PowerShell:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/hafeezmt/OfflineScholar-chat/main/install.ps1 | iex"
+powershell -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/hafeezmt/OfflineScholar-chat/main/install/install.ps1 | iex"
 ```
 
 Linux/macOS:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/hafeezmt/OfflineScholar-chat/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/hafeezmt/OfflineScholar-chat/main/install/install.sh | bash
 ```
 
 The installer downloads the app into `~/OfflineScholar`, installs Ollama and Python if they
@@ -50,7 +58,7 @@ command is installed in `~/.local/bin` on Linux/macOS and on your user `PATH` on
 To choose another folder or port:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/hafeezmt/OfflineScholar-chat/main/install.sh | OS_INSTALL_DIR="$HOME/apps/OfflineScholar" OS_PORT=7861 bash
+curl -fsSL https://raw.githubusercontent.com/hafeezmt/OfflineScholar-chat/main/install/install.sh | OS_INSTALL_DIR="$HOME/apps/OfflineScholar" OS_PORT=7861 bash
 ```
 
 On Windows, set the same variables before running the PowerShell command:
@@ -59,7 +67,7 @@ On Windows, set the same variables before running the PowerShell command:
 $env:OS_INSTALL_DIR = "D:\OfflineScholar"
 $env:OS_PORT = "7861"
 $env:OS_MODELS = "gemma3:1b qwen2.5:1.5b"
-irm https://raw.githubusercontent.com/hafeezmt/OfflineScholar-chat/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/hafeezmt/OfflineScholar-chat/main/install/install.ps1 | iex
 ```
 
 ### Choose your models
@@ -82,7 +90,7 @@ model instead.
 For scripted installs, choose models without the menu:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/hafeezmt/OfflineScholar-chat/main/install.sh | OS_MODELS="gemma3:1b qwen2.5:1.5b" bash
+curl -fsSL https://raw.githubusercontent.com/hafeezmt/OfflineScholar-chat/main/install/install.sh | OS_MODELS="gemma3:1b qwen2.5:1.5b" bash
 ```
 
 `OS_CHAT_MODEL` still selects a single model. If no terminal is available and neither
@@ -163,7 +171,7 @@ desktop app is unavailable, the `offlinescholar` command still works.
 You can also launch the desktop window from a terminal:
 
 ```bash
-./launch.sh
+./install/launch.sh
 ```
 
 ## Manual setup (Linux/macOS)
@@ -190,21 +198,21 @@ Start and stop it with the manager instead of leaving a server running:
 
 ```bash
 source venv/bin/activate
-python manage.py up
-python manage.py stop
+python -m offlinescholar.manage up
+python -m offlinescholar.manage stop
 ```
 
 Open http://127.0.0.1:7860. Ollama is usually already running as a service; if it is not,
 start it in another terminal with `ollama serve`. For the desktop window, run
-`./launch.sh`. The original Gradio interface is optional: install it with
-`pip install -r requirements-gradio.txt`, then run `python gradio_app.py`.
+`./install/launch.sh`. The original Gradio interface is optional: install it with
+`pip install -r requirements-gradio.txt`, then run `python -m offlinescholar.gradio_app`.
 
 To make the short command available after a manual install, link the included wrapper
 somewhere on your `PATH`:
 
 ```bash
 mkdir -p ~/.local/bin
-ln -sf "$PWD/offlinescholar" ~/.local/bin/offlinescholar
+ln -sf "$PWD/install/offlinescholar" ~/.local/bin/offlinescholar
 ```
 
 ## Settings
@@ -273,21 +281,21 @@ Set `OS_EXTRACTIVE_RAG=0` to always let the model write the answer from notes (s
 The browser is optional. The same library and models work from the terminal:
 
 ```bash
-python cli.py index                          # index new or changed notes
-python cli.py list                           # show files and index state
-python cli.py search "photosynthesis"        # find matching passages
-python cli.py ask "explain Newton's second law" --mode "Explain simply"
+python -m offlinescholar.cli index           # index new or changed notes
+python -m offlinescholar.cli list            # show files and index state
+python -m offlinescholar.cli search "photosynthesis"  # find matching passages
+python -m offlinescholar.cli ask "explain Newton's second law" --mode "Explain simply"
 ```
 
 ## Check quality and speed
 
 ```bash
-python test_core.py                              # indexing and search with sample notes
-python -m unittest test_features test_server test_rag test_manage  # API, chunking, retrieval, safety and start/stop checks
-python eval_quality.py --models gemma3:1b qwen2.5:1.5b --verbose
+python -m tests.test_core                        # indexing and search with sample notes
+python -m unittest tests.test_features tests.test_server tests.test_rag tests.test_manage  # API, chunking, retrieval, safety and start/stop checks
+python -m offlinescholar.eval_quality --models gemma3:1b qwen2.5:1.5b --verbose
 ```
 
-`eval_quality.py` runs real questions through Ollama and checks citations, general-answer
+`python -m offlinescholar.eval_quality` runs real questions through Ollama and checks citations, general-answer
 fallback, notes coverage, false premises and caveated time-sensitive answers. It exits
 non-zero on failure, so it can be used before a release.
 
@@ -312,7 +320,7 @@ another port with `OS_PORT=7861 offlinescholar up`.
 ### `ollama ps` still shows models
 
 Run `offlinescholar stop`. It explicitly unloads the chat and embedding models. If you started
-the app manually with `python app.py`, stop that process first, then run
+the app manually with `python -m offlinescholar.app`, stop that process first, then run
 `ollama stop gemma3:1b` and `ollama stop snowflake-arctic-embed:33m`.
 
 ### The desktop app does not open
@@ -333,7 +341,7 @@ you are finished to release the model memory.
 On an 8 GB laptop, close browser tabs you don't need. OfflineScholar switches to the
 small lite model automatically, but the first reply after `offlinescholar up` still takes a
 few seconds while the model loads. If the desktop starts to stutter, lower `OS_NUM_THREAD` or
-use `python cli.py ask` instead of the browser interface.
+use `python -m offlinescholar.cli ask` instead of the browser interface.
 
 ## License
 
