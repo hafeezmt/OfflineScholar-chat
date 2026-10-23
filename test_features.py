@@ -2,6 +2,7 @@
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 try:
     import gradio_app as app
@@ -13,6 +14,7 @@ except ModuleNotFoundError as error:
 import config
 import ingest
 import llm
+import services
 import store
 import webpages
 
@@ -186,6 +188,32 @@ class UploadTests(unittest.TestCase):
     def test_library_list_reports_index_state(self):
         (self.library / "a.txt").write_text("hello")
         self.assertIn("not indexed", app.library_list())
+
+
+class UploadRescanTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.library = Path(self.tmp.name) / "library"
+        self.library.mkdir()
+        self._old_library = config.LIBRARY_DIR
+        config.LIBRARY_DIR = self.library
+
+    def tearDown(self):
+        config.LIBRARY_DIR = self._old_library
+        self.tmp.cleanup()
+
+    def test_unsupported_upload_does_not_rescan_the_library(self):
+        with mock.patch.object(services, "scan_notes") as scan:
+            message = services.add_uploads([("program.exe", b"nope")])
+        self.assertIn("not a supported type", message)
+        scan.assert_not_called()
+
+    def test_saved_upload_rescans_the_library(self):
+        with mock.patch.object(services, "scan_notes", return_value="Indexed 1 file") as scan:
+            message = services.add_uploads([("notes.txt", b"hello")])
+        self.assertIn("Added notes.txt", message)
+        self.assertIn("Indexed 1 file", message)
+        scan.assert_called_once()
 
 
 class WebpageTests(unittest.TestCase):

@@ -80,12 +80,15 @@ def add_upload(filename, data):
 def add_uploads(files):
     """files: iterable of (filename, bytes). Returns a summary message."""
     messages = []
+    saved = False
     for name, data in files:
-        message, _ = add_upload(name, data)
+        message, saved_name = add_upload(name, data)
         messages.append(message)
+        saved = saved or saved_name is not None
     if not messages:
         return "Choose one or more files first."
-    return "; ".join(messages) + "\n" + scan_notes()
+    summary = "; ".join(messages)
+    return summary + ("\n" + scan_notes() if saved else "")
 
 
 def add_url(url):
