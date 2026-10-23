@@ -80,6 +80,7 @@ const state = {
 };
 
 let drawerTimer = null;
+let drawerReturnFocus = null;
 let toastTimer = null;
 
 /* ---------- Small helpers ---------- */
@@ -274,6 +275,7 @@ function closeSidebar() {
 
 function openDrawer() {
   clearTimeout(drawerTimer);
+  if (el.drawer.hidden) drawerReturnFocus = document.activeElement;
   el.drawer.hidden = false;
   el.backdrop.hidden = false;
   el.drawer.setAttribute("aria-hidden", "false");
@@ -290,6 +292,8 @@ function closeDrawer() {
   drawerTimer = setTimeout(() => {
     el.drawer.hidden = true;
     if (!el.sidebar.classList.contains("open")) el.backdrop.hidden = true;
+    if (drawerReturnFocus && drawerReturnFocus.isConnected) drawerReturnFocus.focus();
+    drawerReturnFocus = null;
   }, 260);
 }
 
