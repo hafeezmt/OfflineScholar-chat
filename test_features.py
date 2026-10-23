@@ -312,6 +312,13 @@ class ModelChoiceTests(unittest.TestCase):
         config.CHAT_MODEL = "gemma4:e2b-it-qat"
         self.assertEqual(llm.default_model(["gemma3:1b", "gemma4:e2b-it-qat"]), "gemma3:1b")
 
+    def test_low_memory_prefers_the_smallest_model(self):
+        config.LOW_MEMORY = True
+        config.CHAT_MODEL_EXPLICIT = False
+        config.CHAT_MODEL = "gemma3:1b"
+        self.assertEqual(
+            llm.default_model(["gemma3:1b", "qwen2.5:0.5b"]), "qwen2.5:0.5b")
+
     def test_explicit_model_is_respected(self):
         config.LOW_MEMORY = True
         config.CHAT_MODEL_EXPLICIT = True

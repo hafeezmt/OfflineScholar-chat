@@ -138,7 +138,6 @@ def start(port=None, open_browser=False):
 
     _clear_pid()
     environment = os.environ.copy()
-    environment.setdefault("OS_LOW_MEMORY", "1")
     environment.setdefault("OS_MODEL", settings["chat_model"])
     environment.setdefault("OS_EMBED", settings["embed_model"])
     environment["OS_PORT"] = str(port)

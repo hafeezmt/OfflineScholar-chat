@@ -113,6 +113,13 @@ class RetrievalGatingTests(unittest.TestCase):
 
 
 class PromptTests(unittest.TestCase):
+    def setUp(self):
+        self._low = config.LOW_MEMORY
+        config.LOW_MEMORY = False
+
+    def tearDown(self):
+        config.LOW_MEMORY = self._low
+
     def test_notes_prompt_requires_citations_and_admits_gaps(self):
         prompt = llm.build_system(passages=[
             {"path": "/tmp/photosynthesis.txt", "label": "part 1", "text": "Plants release oxygen."}
@@ -132,6 +139,16 @@ class PromptTests(unittest.TestCase):
     def test_notes_off_says_they_were_not_searched(self):
         prompt = llm.build_system(passages=None)
         self.assertIn("were not searched", prompt)
+
+    def test_low_memory_prompt_is_short_but_safe(self):
+        config.LOW_MEMORY = True
+        prompt = llm.build_system(passages=[
+            {"path": "/tmp/photosynthesis.txt", "label": "part 1", "text": "Plants release oxygen."}
+        ])
+        self.assertIn("[1] photosynthesis.txt", prompt)
+        self.assertIn("cite", prompt.lower())
+        self.assertIn("never invent", prompt.lower())
+        self.assertLess(len(prompt), 600)
 
     def test_citation_verifier_catches_invented_sources(self):
         result = services.verify_answer("Answer [1] and [7]", [passage(1, "evidence")])

@@ -181,7 +181,8 @@ pip install -r requirements.txt
 ```
 
 On a machine with less than about 5.5 GB of available RAM, OfflineScholar starts in
-**low-RAM mode** and uses `qwen2.5:1.5b` when it is installed, otherwise `gemma3:1b`.
+**low-RAM mode** and prefers the smallest installed chat model: `qwen2.5:0.5b`, then
+`gemma3:270m`, then `gemma3:1b`, and finally `qwen2.5:1.5b`.
 You can change the model any time from the model picker above the message box. The first
 reply after a start is slower while Ollama loads the model; the service preloads it in the
 background.
@@ -215,7 +216,7 @@ win over the file.
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `OS_MODEL` | first model selected during install | Chat model. Low-RAM machines normally use `gemma3:1b`; set this to force one |
+| `OS_MODEL` | first model selected during install | Chat model. Low-RAM machines prefer the smallest installed model; set this to force one |
 | `OS_EMBED` | `snowflake-arctic-embed:33m` | Notes search model |
 | `OS_EMBEDDINGS` | `1` | Set to `0`/`off` for keyword-only notes search |
 | `OS_TOP_K` | `4` | Candidate passages retrieved before relevance filtering |
@@ -224,16 +225,16 @@ win over the file.
 | `OS_RAG_MIN_MARGIN` | `0.06` | Drop weaker matches too far below the best one |
 | `OS_RAG_PASSAGE_WORDS` | `90` | Maximum note words placed in the prompt |
 | `OS_EXTRACTIVE_RAG` | `1` | Quote notes directly with a citation instead of asking the model to repeat them |
-| `OS_NUM_CTX` | `2048` | Context window for the chat model |
+| `OS_NUM_CTX` | `2048` (`1024` on low-RAM machines) | Context window for the chat model |
 | `OS_TEMPERATURE` | `0.2` | Answer randomness, between 0 and 2 |
-| `OS_HISTORY` | `8` | Messages kept from the conversation |
+| `OS_HISTORY` | `8` (`4` on low-RAM machines) | Messages kept from the conversation |
 | `OS_MAX_MESSAGE_CHARS` | `20000` | Longest question the server accepts |
 | `OS_CHUNK_WORDS` | `160` | Words per indexed chunk |
 | `OS_CHUNK_OVERLAP` | `30` | Words shared by neighbouring chunks |
 | `OS_LOW_MEMORY` | auto | `1` forces low-RAM mode, `0` turns it off |
-| `OS_NUM_PREDICT` | `384` | Maximum tokens in one answer (lower is lighter) |
-| `OS_NUM_THREAD` | half the CPUs | CPU threads used by the model; lower keeps the desktop responsive |
-| `OS_NUM_BATCH` | `128` | Prompt batch size (lower uses less peak memory) |
+| `OS_NUM_PREDICT` | `384` (`192` on low-RAM machines) | Maximum tokens in one answer (lower is lighter) |
+| `OS_NUM_THREAD` | half the CPUs (`3` on a 4-core low-RAM machine) | CPU threads used by the model; lower keeps the desktop responsive |
+| `OS_NUM_BATCH` | `128` (`64` on low-RAM machines) | Prompt batch size (lower uses less peak memory) |
 | `OS_KEEP_ALIVE` | `30m` | How long the model stays loaded while the app is running; `stop` unloads it immediately |
 | `OS_AUTO_INDEX` | `1` | Re-index changed notes in the background at startup |
 | `OS_WARMUP` | `1` | Preload the chat model at startup |
@@ -324,16 +325,28 @@ not need Tk and will continue to work.
 
 ### The app is slow on the first question
 
-The model is being loaded into RAM. After that it stays warm while the app is running. Use
-`gemma3:1b` on low-RAM machines, close unused browser tabs, and run `offlinescholar stop` when
-you are finished to release the model memory.
+The model is being loaded into RAM. After that it stays warm while the app is running. On
+low-RAM machines OfflineScholar automatically uses a shorter prompt, a 1024-token context,
+192-token answers, four messages of history and smaller prompt batches, so the first token
+appears sooner. Close unused browser tabs and run `offlinescholar stop` when you are finished
+to release the model memory.
 
-## Low memory tip
+## 4 GB RAM tip
 
-On an 8 GB laptop, close browser tabs you don't need. OfflineScholar switches to the
-small lite model automatically, but the first reply after `offlinescholar up` still takes a
-few seconds while the model loads. If the desktop starts to stutter, lower `OS_NUM_THREAD` or
-use `python cli.py ask` instead of the browser interface.
+A 4 GB laptop needs the smallest chat model. Install it once:
+
+```bash
+ollama pull qwen2.5:0.5b
+offlinescholar stop
+offlinescholar up
+```
+
+Then choose **Qwen 2.5 0.5B** in the Model menu; the app remembers that choice. It is about
+400 MB instead of 806 MB and is much faster on a slow CPU. Keep the browser to one tab and
+close other heavy apps (especially Chrome and Spotify) while you use it.
+
+Answers are shorter on low-RAM machines (about 140 words) to avoid long waits. If you need a
+longer answer, raise `OS_NUM_PREDICT`, or use `OS_NUM_PREDICT=384 offlinescholar restart`.
 
 ## License
 

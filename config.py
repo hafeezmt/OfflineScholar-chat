@@ -68,18 +68,21 @@ WEB_MAX_RESULTS = _int_env("OS_WEB_MAX_RESULTS", 5)
 EXTRACTIVE_WEB = _bool_env("OS_EXTRACTIVE_WEB", True)
 LIVE_LOOKUP_ENABLED = False
 
-# Chat generation
-NUM_CTX = _int_env("OS_NUM_CTX", 2048, minimum=512)
+# Chat generation. Low-RAM machines use a smaller context, shorter history and
+# shorter answers so the first token appears sooner and swap is avoided.
+CPU_COUNT = os.cpu_count() or 2
+FAST_THREADS = CPU_COUNT if CPU_COUNT <= 2 else min(4, CPU_COUNT - 1)
+NUM_CTX = _int_env("OS_NUM_CTX", 1024 if LOW_MEMORY else 2048, minimum=512)
 TEMPERATURE = _float_env("OS_TEMPERATURE", 0.2)
 TOP_P = _float_env("OS_TOP_P", 0.9, 0.0, 1.0)
 REPEAT_PENALTY = _float_env("OS_REPEAT_PENALTY", 1.05, 1.0, 2.0)
-HISTORY_LIMIT = _int_env("OS_HISTORY", 8, minimum=0)
+HISTORY_LIMIT = _int_env("OS_HISTORY", 4 if LOW_MEMORY else 8, minimum=0)
 MAX_MESSAGE_CHARS = _int_env("OS_MAX_MESSAGE_CHARS", 20_000, minimum=200)
 
 # Keeps CPU and memory use in check on small laptops (the UI stays responsive).
-NUM_PREDICT = _int_env("OS_NUM_PREDICT", 384, minimum=32)
-NUM_THREAD = _int_env("OS_NUM_THREAD", max(1, (os.cpu_count() or 2) // 2), minimum=1)
-NUM_BATCH = _int_env("OS_NUM_BATCH", 128, minimum=16)
+NUM_PREDICT = _int_env("OS_NUM_PREDICT", 192 if LOW_MEMORY else 384, minimum=32)
+NUM_THREAD = _int_env("OS_NUM_THREAD", FAST_THREADS if LOW_MEMORY else max(1, CPU_COUNT // 2), minimum=1)
+NUM_BATCH = _int_env("OS_NUM_BATCH", 64 if LOW_MEMORY else 128, minimum=16)
 KEEP_ALIVE = os.environ.get("OS_KEEP_ALIVE", "30m")
 
 # Keep chats fast: index new notes and preload the chat model in the background.
