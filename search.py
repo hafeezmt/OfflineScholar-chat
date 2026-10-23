@@ -84,11 +84,13 @@ def find(question, con=None, embed_fn=None, min_score=None, limit=None):
             if not strong:
                 continue
             lexical_ids.add(item["id"])
+            coverage = len(matched) / max(1, len(terms))
+            score = min(1.0, round(coverage + _phrase_bonus(terms, item["text"]), 4))
             candidates[item["id"]] = dict(
                 item,
                 matched_terms=matched,
                 match="keyword",
-                score=_phrase_bonus(terms, item["text"]),
+                score=score,
             )
 
         best = semantic[0]["score"] if semantic else 0.0

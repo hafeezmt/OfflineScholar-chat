@@ -87,6 +87,13 @@ class RetrievalGatingTests(unittest.TestCase):
             passage(3, "Newton's second law says F = m x a.", score=0.40)])
         self.assertEqual([hit["id"] for hit in hits], [3])
 
+    def test_keyword_hits_report_a_bounded_relevance_score(self):
+        keyword = [passage(5, "Newton's second law says force equals mass times acceleration.")]
+        hits = self.find("What is Newton's second law?", keyword=keyword)
+        self.assertEqual(len(hits), 1)
+        self.assertGreater(hits[0]["score"], 0)
+        self.assertLessEqual(hits[0]["score"], 1.0)
+
     def test_one_common_keyword_is_not_enough(self):
         keyword = [passage(4, "Rockets move forward because they push gas backwards.")]
         hits = self.find("Why do passengers lurch forward when a bus brakes?", keyword=keyword)
