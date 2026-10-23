@@ -10,24 +10,38 @@ jobs:
   check-email:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: Checkout repository (full history)
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0   # needed for git log over the whole history
 
-      - name: Get list of commits in this push
-        id: commits
+      - name: Determine commit range
+        id: range
         run: |
-          echo "::set-output name=range::$(git rev-parse ${{ github.event.before }}..${{ github.sha }})"
+          # If this is the first commit on the branch, use the current commit only
+          if [ "${{ github.event.before }}" = "0000000000000000000000000000000000000000" ]; then
+            echo "range=${{ github.sha }}" >> $GITHUB_OUTPUT
+          else
+            echo "range=${{ github.event.before }}..${{ github.sha }}" >> $GITHUB_OUTPUT
+          fi
 
-      - name: Verify author email for each commit
+      - name: Verify author email for each new commit
+        env:
+          ALLOWED_EMAIL: "hafsatabubakarsulaiman543@gmail.com"
         run: |
-          ALLOWED_EMAIL="hafsatabubakarsulaiman543@gmail.com"
-          for commit in $(git rev-list ${{ steps.commits.outputs.range }}); do
+          echo "Checking commits in range: ${{ steps.range.outputs.range }}"
+          BAD=0
+          for commit in $(git rev-list ${{ steps.range.outputs.range }}); do
             email=$(git show -s --format='%ae' $commit)
             if [ "$email" != "$ALLOWED_EMAIL" ]; then
-              echo "Commit $commit has disallowed author email: $email"
-              exit 1
+              echo "❌ Commit $commit has disallowed author email: $email"
+              BAD=1
+            else
+              echo "✔️ Commit $commit author email OK"
             fi
           done
-          echo "All commit author emails are valid."
+          if [ $BAD -ne 0 ]; then
+            echo "🛑 One or more commits use an unauthorized e‑mail address."
+            exit 1
+          fi
+          echo "✅ All new commits use the allowed e‑mail."
