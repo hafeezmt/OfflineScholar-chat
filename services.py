@@ -6,7 +6,13 @@ from datetime import date
 from pathlib import Path
 from urllib.parse import urlparse
 
-from . import config, ingest, llm, search, store, webpages, websearch
+import config
+import ingest
+import llm
+import search
+import store
+import webpages
+import websearch
 
 MAX_UPLOAD_BYTES = 25_000_000
 

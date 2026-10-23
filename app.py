@@ -1,12 +1,12 @@
 """OfflineScholar launcher: starts the custom FastAPI web app.
 
-The original Gradio interface is still available in offlinescholar.gradio_app.
+The original Gradio interface is still available in gradio_app.py.
 """
 import os
 import sys
 from pathlib import Path
 
-BASE = Path(__file__).resolve().parent.parent
+BASE = Path(__file__).resolve().parent
 if str(BASE) not in sys.path:
     sys.path.insert(0, str(BASE))
 
@@ -14,7 +14,7 @@ if str(BASE) not in sys.path:
 def main():
     import uvicorn
 
-    from offlinescholar import server
+    import server
 
     uvicorn.run(
         server.app,

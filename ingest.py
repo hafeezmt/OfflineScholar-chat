@@ -4,7 +4,8 @@ import re
 import zipfile
 from pathlib import Path
 
-from . import config, store
+import config
+import store
 
 
 def read_sections(path: Path):

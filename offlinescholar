@@ -10,6 +10,4 @@ while [ -L "$SOURCE" ]; do
   esac
 done
 DIR="$(cd -P "$(dirname "$SOURCE")" >/dev/null 2>&1 && pwd)"
-ROOT="$(cd -P "$DIR/.." >/dev/null 2>&1 && pwd)"
-cd "$ROOT"
-exec "$ROOT/venv/bin/python" -m offlinescholar.manage "$@"
+exec "$DIR/venv/bin/python" "$DIR/manage.py" "$@"

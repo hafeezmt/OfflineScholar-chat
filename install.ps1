@@ -379,23 +379,20 @@ Set-Content -Path (Join-Path $InstallDir "settings.json") -Value $settings -Enco
 
 $cli = @'
 @echo off
-cd /d "%~dp0"
-"%~dp0venv\Scripts\python.exe" -m offlinescholar.manage %*
+"%~dp0venv\Scripts\python.exe" "%~dp0manage.py" %*
 '@
 Set-Content -Path (Join-Path $InstallDir "offlinescholar.cmd") -Value $cli -Encoding ASCII
 Set-Content -Path (Join-Path $InstallDir "offlinescolar.cmd") -Value $cli -Encoding ASCII
 
 $startBat = @'
 @echo off
-cd /d "%~dp0"
-"%~dp0venv\Scripts\python.exe" -m offlinescholar.manage up
+"%~dp0venv\Scripts\python.exe" "%~dp0manage.py" up
 '@
 Set-Content -Path (Join-Path $InstallDir "start.bat") -Value $startBat -Encoding ASCII
 
 $stopBat = @'
 @echo off
-cd /d "%~dp0"
-"%~dp0venv\Scripts\python.exe" -m offlinescholar.manage stop
+"%~dp0venv\Scripts\python.exe" "%~dp0manage.py" stop
 '@
 Set-Content -Path (Join-Path $InstallDir "stop.bat") -Value $stopBat -Encoding ASCII
 
@@ -415,7 +412,7 @@ if (-not $SkipDesktop) {
             $shell = New-Object -ComObject WScript.Shell
             $shortcut = $shell.CreateShortcut($Path)
             $shortcut.TargetPath = $pythonw
-            $shortcut.Arguments = '-m offlinescholar.desktop'
+            $shortcut.Arguments = '"' + (Join-Path $InstallDir "desktop.py") + '"'
             $shortcut.WorkingDirectory = $InstallDir
             $shortcut.Description = "OfflineScholar"
             $shortcut.Save()
@@ -433,9 +430,7 @@ if (-not $SkipDesktop) {
     }
 }
 
-Push-Location $InstallDir
-& $venvPython -m offlinescholar.manage stop | Out-Null
-Pop-Location
+& $venvPython (Join-Path $InstallDir "manage.py") stop | Out-Null
 
 Write-Host ""
 Write-Host "Installed in: $InstallDir"

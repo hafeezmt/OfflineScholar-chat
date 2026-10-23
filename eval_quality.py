@@ -1,13 +1,14 @@
 """Repeatable quality and latency check against the real local Ollama models.
 
 Usage:
-    venv/bin/python -m offlinescholar.eval_quality
-    venv/bin/python -m offlinescholar.eval_quality --models gemma3:1b qwen2.5:1.5b --verbose
+    venv/bin/python eval_quality.py
+    venv/bin/python eval_quality.py --models gemma3:1b qwen2.5:1.5b --verbose
 """
 import argparse
 import time
 
-from . import llm, services
+import llm
+import services
 
 CASES = [
     {

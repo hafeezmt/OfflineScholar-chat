@@ -4,7 +4,7 @@ import sqlite3
 import time
 from array import array
 
-from . import config
+import config
 
 STOP = set("a an the is are was were be of to in on at for and or what why how who when where which "
            "does do did can could would should explain tell me about with from by it this that these those "

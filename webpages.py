@@ -4,7 +4,7 @@ import re
 import urllib.request
 from html.parser import HTMLParser
 
-from . import config
+import config
 
 BLOCK_TAGS = {"p", "br", "li", "h1", "h2", "h3", "h4", "h5", "h6", "tr", "td", "th",
               "pre", "blockquote", "div", "section", "article", "table", "ul", "ol"}

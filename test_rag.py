@@ -5,7 +5,13 @@ from datetime import date
 from pathlib import Path
 from unittest import mock
 
-from offlinescholar import config, ingest, llm, search, services, store, websearch
+import config
+import ingest
+import llm
+import search
+import services
+import store
+import websearch
 
 
 def passage(passage_id, text, label="part 1", score=None):

@@ -5,13 +5,18 @@ from pathlib import Path
 
 import gradio as gr
 
-from . import config, ingest, llm, search, store, webpages
+import config
+import ingest
+import llm
+import search
+import store
+import webpages
 
 config.LIBRARY_DIR.mkdir(exist_ok=True)
 
 OLLAMA_HELP = "I can't reach Ollama. Start it in another terminal with:  ollama serve"
 
-ASSETS = config.PACKAGE_DIR / "assets"
+ASSETS = config.BASE / "assets"
 CSS = ""
 if (ASSETS / "style.css").exists():
     CSS = (ASSETS / "style.css").read_text(encoding="utf-8")

@@ -3,7 +3,7 @@ from pathlib import Path
 
 import ollama
 
-from . import config
+import config
 
 LANGUAGES = {
     "English": "Reply in clear, simple English.",

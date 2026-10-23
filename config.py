@@ -2,8 +2,7 @@
 import os
 from pathlib import Path
 
-PACKAGE_DIR = Path(__file__).resolve().parent
-BASE = PACKAGE_DIR.parent
+BASE = Path(__file__).parent
 LIBRARY_DIR = BASE / "library"
 SAVED_DIR = LIBRARY_DIR / "saved_pages"
 DB_PATH = BASE / "scholar.db"
