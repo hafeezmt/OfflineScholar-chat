@@ -1,0 +1,33 @@
+name: Verify Commit Author Email
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  check-email:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get list of commits in this push
+        id: commits
+        run: |
+          echo "::set-output name=range::$(git rev-parse ${{ github.event.before }}..${{ github.sha }})"
+
+      - name: Verify author email for each commit
+        run: |
+          ALLOWED_EMAIL="hafsatabubakarsulaiman543@gmail.com"
+          for commit in $(git rev-list ${{ steps.commits.outputs.range }}); do
+            email=$(git show -s --format='%ae' $commit)
+            if [ "$email" != "$ALLOWED_EMAIL" ]; then
+              echo "Commit $commit has disallowed author email: $email"
+              exit 1
+            fi
+          done
+          echo "All commit author emails are valid."
