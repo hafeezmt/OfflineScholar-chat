@@ -602,7 +602,7 @@ function renderWelcome() {
         ["Summarise my latest upload", "Summarise my latest upload in 5 bullet points."],
       ]
     : [
-        ["Explain a concept simply", "Explain photosynthesis simply, with a everyday example."],
+        ["Explain a concept simply", "Explain photosynthesis simply, with an everyday example."],
         ["Walk me through homework", "Help me solve a maths problem step by step."],
         ["Make a revision quiz", "Make a 5-question quiz on the water cycle."],
       ];
@@ -923,7 +923,10 @@ async function uploadFiles(fileList) {
   if (!files.length) return;
   const oversized = files.filter((file) => file.size > 25 * 1024 * 1024);
   const allowed = files.filter((file) => file.size <= 25 * 1024 * 1024);
-  if (oversized.length) toast(oversized.map((file) => file.name).join(", ") + " is larger than 25 MB");
+  if (oversized.length) {
+    const names = oversized.map((file) => file.name).join(", ");
+    toast(names + (oversized.length === 1 ? " is larger than 25 MB" : " are larger than 25 MB"));
+  }
   if (!allowed.length) return;
 
   const form = new FormData();
