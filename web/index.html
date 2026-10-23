@@ -142,10 +142,10 @@
 
   <div class="backdrop" id="backdrop" hidden></div>
 
-  <aside class="drawer" id="notesDrawer" aria-label="Notes library" aria-hidden="true" hidden>
+  <aside class="drawer" id="notesDrawer" role="dialog" aria-modal="true" aria-labelledby="notesDrawerTitle" aria-hidden="true" hidden>
     <header class="drawer-head">
       <div>
-        <h2>Notes library</h2>
+        <h2 id="notesDrawerTitle">Notes library</h2>
         <p>Your files stay on this laptop.</p>
       </div>
       <button class="icon-btn" id="drawerClose" type="button" aria-label="Close notes">×</button>
