@@ -266,11 +266,15 @@ function toggleTheme() {
 function openSidebar() {
   el.sidebar.classList.add("open");
   el.backdrop.hidden = false;
+  el.menuBtn.setAttribute("aria-expanded", "true");
+  el.menuBtn.setAttribute("aria-label", "Close chat history");
 }
 
 function closeSidebar() {
   el.sidebar.classList.remove("open");
   if (el.drawer.hidden) el.backdrop.hidden = true;
+  el.menuBtn.setAttribute("aria-expanded", "false");
+  el.menuBtn.setAttribute("aria-label", "Open chat history");
 }
 
 function openDrawer() {
