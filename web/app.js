@@ -2,6 +2,7 @@
 
 const $ = (id) => document.getElementById(id);
 const LIVE_LOOKUP_ENABLED = false;
+const LATEST_UPLOAD = /\b(?:latest|most recent|newest|last)\s+(?:upload|uploaded file|file|document|note)\b/i;
 
 const el = {
   sidebar: $("sidebar"),
@@ -73,7 +74,7 @@ const state = {
     mode: memory.get("os.mode", "Just chat"),
     language: memory.get("os.language", "English"),
     model: memory.get("os.model2", ""),
-    useNotes: memory.get("os.useNotes2", true),
+    useNotes: memory.get("os.useNotes3", true),
     useWeb: memory.get("os.useWeb", false),
   },
 };
@@ -310,6 +311,18 @@ function toast(message) {
       el.toast.hidden = true;
     }, 220);
   }, 3600);
+}
+
+function applyNotesPreference(enabled, announce = false) {
+  state.prefs.useNotes = Boolean(enabled);
+  memory.set("os.useNotes3", state.prefs.useNotes);
+  el.notesToggle.setAttribute("aria-pressed", state.prefs.useNotes ? "true" : "false");
+  el.notesToggle.title = state.prefs.useNotes
+    ? "Notes are on: replies can search your library"
+    : "Notes are off: click to search your library";
+  if (announce) {
+    toast(state.prefs.useNotes ? "Replies will search your notes" : "Notes search is off");
+  }
 }
 
 function showBanner(message) {
@@ -636,6 +649,7 @@ async function sendMessage(preset) {
   if (state.streaming) return;
   const text = String(preset !== undefined ? preset : el.input.value).trim();
   if (!text) return;
+  if (LATEST_UPLOAD.test(text)) applyNotesPreference(true);
 
   hideBanner();
   if (preset === undefined) {
@@ -911,6 +925,7 @@ async function uploadFiles(fileList) {
   try {
     const data = await api("/api/notes/upload", { method: "POST", body: form });
     renderNotes(data);
+    if ((data.files || []).length) applyNotesPreference(true);
     showNotesStatus(firstLine(data.message));
     toast(firstLine(data.message));
     await loadStatus();
@@ -1008,15 +1023,9 @@ function wireEvents() {
     updateSubtitle();
   });
 
-  const syncNotesToggle = () => {
-    el.notesToggle.setAttribute("aria-pressed", state.prefs.useNotes ? "true" : "false");
-  };
-  syncNotesToggle();
+  applyNotesPreference(state.prefs.useNotes);
   el.notesToggle.addEventListener("click", () => {
-    state.prefs.useNotes = !state.prefs.useNotes;
-    memory.set("os.useNotes2", state.prefs.useNotes);
-    syncNotesToggle();
-    toast(state.prefs.useNotes ? "Replies will search your notes" : "Notes search is off");
+    applyNotesPreference(!state.prefs.useNotes, true);
   });
 
   const syncWebToggle = () => {
