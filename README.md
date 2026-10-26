@@ -221,7 +221,7 @@ win over the file.
 | `OS_EMBEDDINGS` | `1` | Set to `0`/`off` for keyword-only notes search |
 | `OS_TOP_K` | `4` | Candidate passages retrieved before relevance filtering |
 | `OS_RAG_MAX_PASSAGES` | `1` | Passages actually given to the model (lower is faster) |
-| `OS_RAG_MIN_SCORE` | `0.62` | Minimum similarity for a semantic note match |
+| `OS_RAG_MIN_SCORE` | `0.75` | Minimum similarity for a semantic note match |
 | `OS_RAG_MIN_MARGIN` | `0.06` | Drop weaker matches too far below the best one |
 | `OS_RAG_PASSAGE_WORDS` | `90` | Maximum note words placed in the prompt |
 | `OS_EXTRACTIVE_RAG` | `1` | Quote notes directly with a citation instead of asking the model to repeat them |
@@ -284,7 +284,7 @@ python cli.py ask "explain Newton's second law" --mode "Explain simply"
 
 ```bash
 python test_core.py                              # indexing and search with sample notes
-python -m unittest test_features test_server test_rag test_manage  # API, chunking, retrieval, safety and start/stop checks
+python -m unittest test_features test_server test_rag test_manage test_cli  # API, chunking, retrieval, safety, start/stop and CLI checks
 python eval_quality.py --models gemma3:1b qwen2.5:1.5b --verbose
 ```
 
