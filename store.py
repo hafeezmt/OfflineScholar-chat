@@ -39,6 +39,7 @@ def connect(db_path=None):
             created REAL NOT NULL
         );
         CREATE INDEX IF NOT EXISTS idx_messages_conversation ON messages(conversation_id, id);
+        CREATE INDEX IF NOT EXISTS idx_conversations_updated ON conversations(updated DESC);
         """
     )
     return con
