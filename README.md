@@ -278,7 +278,13 @@ python cli.py index                          # index new or changed notes
 python cli.py list                           # show files and index state
 python cli.py search "photosynthesis"        # find matching passages
 python cli.py ask "explain Newton's second law" --mode "Explain simply"
+python cli.py chats                          # list saved chats
+python cli.py export 1 --output chat.md      # save a chat as Markdown
+python cli.py delete 1                       # delete a saved chat
 ```
+
+`chats` prints the chat numbers used by `delete` and `export`; omitting `--output`
+prints the Markdown to the terminal.
 
 ## Check quality and speed
 
