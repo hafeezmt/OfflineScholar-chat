@@ -59,6 +59,30 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(self.client.get(f"/api/conversations/{conversation_id}").status_code, 404)
         self.assertEqual(self.client.delete(f"/api/conversations/{conversation_id}").status_code, 404)
 
+    def test_export_a_conversation_as_markdown(self):
+        conversation_id = self.client.post("/api/conversations").json()["id"]
+        con = store.connect(self.db)
+        try:
+            store.append_message(con, conversation_id, "user", "What is force?")
+            store.append_message(con, conversation_id, "assistant", "A push or a pull.")
+        finally:
+            con.close()
+
+        response = self.client.get(f"/api/conversations/{conversation_id}/export")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("text/markdown", response.headers["content-type"])
+        self.assertIn("attachment", response.headers["content-disposition"])
+        self.assertIn("offlinescholar-new-chat.md", response.headers["content-disposition"])
+        self.assertIn("# New chat", response.text)
+        self.assertIn("**You**\n\nWhat is force?", response.text)
+        self.assertIn("**OfflineScholar**\n\nA push or a pull.", response.text)
+
+    def test_exporting_an_unknown_conversation_returns_404(self):
+        response = self.client.get("/api/conversations/99999/export")
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.json()["detail"], "Conversation not found")
+
     def test_deleting_an_unknown_conversation_returns_404(self):
         response = self.client.delete("/api/conversations/99999")
         self.assertEqual(response.status_code, 404)

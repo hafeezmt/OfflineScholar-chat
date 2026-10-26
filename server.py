@@ -2,6 +2,7 @@
 import json
 import logging
 import os
+import re
 import threading
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -9,7 +10,7 @@ from typing import Optional
 
 import uvicorn
 from fastapi import FastAPI, File, HTTPException, UploadFile
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from starlette.concurrency import run_in_threadpool
@@ -135,6 +136,26 @@ def get_conversation(conversation_id: int):
         }
     finally:
         con.close()
+
+
+@app.get("/api/conversations/{conversation_id}/export")
+def export_conversation(conversation_id: int):
+    con = store.connect()
+    try:
+        if not store.conversation_exists(con, conversation_id):
+            raise HTTPException(status_code=404, detail="Conversation not found")
+        title = con.execute(
+            "SELECT title FROM conversations WHERE id=?", (conversation_id,)
+        ).fetchone()[0]
+        markdown = store.conversation_markdown(con, conversation_id)
+    finally:
+        con.close()
+    slug = re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")[:60] or "chat"
+    return Response(
+        content=markdown,
+        media_type="text/markdown; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="offlinescholar-{slug}.md"'},
+    )
 
 
 @app.patch("/api/conversations/{conversation_id}")
