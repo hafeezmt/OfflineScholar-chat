@@ -1,6 +1,7 @@
 """Terminal front end: index your notes, search them, and chat without the web UI."""
 import argparse
 import sys
+import time
 from pathlib import Path
 
 import config
@@ -44,6 +45,22 @@ def cmd_list(args):
     return 0
 
 
+def cmd_chats(args):
+    con = store.connect()
+    try:
+        conversations = store.list_conversations(con, limit=args.limit)
+    finally:
+        con.close()
+    if not conversations:
+        print("No saved chats yet. Ask a question to start one.")
+        return 0
+    for conversation in conversations:
+        updated = time.strftime("%Y-%m-%d %H:%M", time.localtime(conversation["updated"]))
+        print(f'{conversation["id"]:>4}  {updated}  {conversation["title"]}')
+    print(f"{len(conversations)} chat(s).")
+    return 0
+
+
 def cmd_search(args):
     passages = search.find(args.query)
     if not passages:
@@ -84,6 +101,9 @@ def main(argv=None):
     sub.add_parser("index", help="index new or changed files in the library")
     sub.add_parser("list", help="list library files and their index state")
 
+    p_chats = sub.add_parser("chats", help="list saved chats")
+    p_chats.add_argument("--limit", type=int, default=20, help="maximum chats to show")
+
     p_search = sub.add_parser("search", help="search your notes")
     p_search.add_argument("query")
 
@@ -99,6 +119,7 @@ def main(argv=None):
     return {
         "index": cmd_index,
         "list": cmd_list,
+        "chats": cmd_chats,
         "search": cmd_search,
         "ask": cmd_ask,
     }[args.command](args)

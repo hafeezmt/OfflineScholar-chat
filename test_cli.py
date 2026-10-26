@@ -26,6 +26,19 @@ class CliTests(unittest.TestCase):
         retrieve.assert_called_once_with("hi")
         self.assertEqual(chat.call_args.kwargs["model"], "tiny:latest")
 
+    def test_chats_lists_saved_conversations(self):
+        conversation = {"id": 7, "title": "Physics revision", "updated": 0, "preview": "Newton"}
+        connection = mock.MagicMock()
+        output = io.StringIO()
+        with mock.patch.object(cli.store, "connect", return_value=connection), \
+                mock.patch.object(cli.store, "list_conversations", return_value=[conversation]), \
+                contextlib.redirect_stdout(output):
+            code = cli.main(["chats", "--limit", "5"])
+        self.assertEqual(code, 0)
+        self.assertIn("Physics revision", output.getvalue())
+        self.assertIn("1 chat(s).", output.getvalue())
+        connection.close.assert_called_once_with()
+
 
 if __name__ == "__main__":
     unittest.main()
