@@ -28,4 +28,4 @@ jobs:
         run: python test_core.py
 
       - name: Run the unit test suite
-        run: python -m unittest test_features test_server test_rag test_manage test_cli
+        run: python -m unittest test_features test_server test_rag test_manage test_cli test_store

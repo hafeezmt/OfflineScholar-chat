@@ -284,7 +284,7 @@ python cli.py ask "explain Newton's second law" --mode "Explain simply"
 
 ```bash
 python test_core.py                              # indexing and search with sample notes
-python -m unittest test_features test_server test_rag test_manage test_cli  # API, chunking, retrieval, safety, start/stop and CLI checks
+python -m unittest test_features test_server test_rag test_manage test_cli test_store  # API, chunking, retrieval, safety, start/stop and CLI checks
 python eval_quality.py --models gemma3:1b qwen2.5:1.5b --verbose
 ```
 

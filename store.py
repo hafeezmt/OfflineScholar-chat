@@ -155,6 +155,18 @@ def conversation_messages(con, conversation_id, limit=None):
     return [{"role": r[0], "content": r[1]} for r in rows]
 
 
+def conversation_markdown(con, conversation_id):
+    """Render a saved conversation as Markdown, or None when it does not exist."""
+    row = con.execute("SELECT title FROM conversations WHERE id=?", (conversation_id,)).fetchone()
+    if not row:
+        return None
+    lines = [f"# {row[0]}", ""]
+    for message in conversation_messages(con, conversation_id):
+        speaker = "You" if message["role"] == "user" else "OfflineScholar"
+        lines.extend([f"**{speaker}**", "", message["content"], ""])
+    return "\n".join(lines).rstrip() + "\n"
+
+
 def append_message(con, conversation_id, role, content):
     now = time.time()
     con.execute("INSERT INTO messages(conversation_id, role, content, created) VALUES (?,?,?,?)",
