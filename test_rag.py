@@ -150,6 +150,11 @@ class PromptTests(unittest.TestCase):
         self.assertIn("never invent", prompt.lower())
         self.assertLess(len(prompt), 600)
 
+    def test_prompt_asks_for_a_clean_stop(self):
+        prompt = llm.build_system(passages=None)
+        self.assertIn("Stop at a full stop.", prompt)
+        self.assertIn(str(llm.answer_word_limit()), prompt)
+
     def test_citation_verifier_catches_invented_sources(self):
         result = services.verify_answer("Answer [1] and [7]", [passage(1, "evidence")])
         self.assertEqual(result["citations"], [1])
@@ -373,6 +378,35 @@ class WebLookupTests(unittest.TestCase):
                 True, "gemma3:1b", passages=[], use_web=True))
         self.assertIn("search is unavailable", answer)
         chat.assert_not_called()
+
+
+class StreamingTests(unittest.TestCase):
+    def test_a_length_stop_keeps_only_complete_sentences(self):
+        parts = [
+            {"message": {"content": "Plants make food. Extra"}},
+            {"message": {"content": " words"}, "done": True, "done_reason": "length"},
+        ]
+        meta = {}
+        with mock.patch.object(llm.ollama, "chat", return_value=iter(parts)):
+            answer = "".join(llm.chat_stream([], "What is photosynthesis?", meta=meta))
+        self.assertEqual(
+            answer,
+            'Plants make food.\n\n_(The answer reached the length limit. Ask "continue" for the rest.)_')
+        self.assertTrue(meta["truncated"])
+        self.assertEqual(meta["done_reason"], "length")
+
+    def test_a_natural_stop_flushes_the_final_sentence(self):
+        parts = [
+            {"message": {"content": "A short answer"}},
+            {"message": {"content": " without a full stop"},
+             "done": True, "done_reason": "stop"},
+        ]
+        meta = {}
+        with mock.patch.object(llm.ollama, "chat", return_value=iter(parts)):
+            answer = "".join(llm.chat_stream([], "Hi", meta=meta))
+        self.assertEqual(answer, "A short answer without a full stop")
+        self.assertNotIn("truncated", meta)
+        self.assertEqual(meta["done_reason"], "stop")
 
 
 if __name__ == "__main__":

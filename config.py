@@ -80,7 +80,7 @@ HISTORY_LIMIT = _int_env("OS_HISTORY", 4 if LOW_MEMORY else 8, minimum=0)
 MAX_MESSAGE_CHARS = _int_env("OS_MAX_MESSAGE_CHARS", 20_000, minimum=200)
 
 # Keeps CPU and memory use in check on small laptops (the UI stays responsive).
-NUM_PREDICT = _int_env("OS_NUM_PREDICT", 192 if LOW_MEMORY else 384, minimum=32)
+NUM_PREDICT = _int_env("OS_NUM_PREDICT", 256 if LOW_MEMORY else 512, minimum=32)
 NUM_THREAD = _int_env("OS_NUM_THREAD", FAST_THREADS if LOW_MEMORY else max(1, CPU_COUNT // 2), minimum=1)
 NUM_BATCH = _int_env("OS_NUM_BATCH", 64 if LOW_MEMORY else 128, minimum=16)
 KEEP_ALIVE = os.environ.get("OS_KEEP_ALIVE", "30m")

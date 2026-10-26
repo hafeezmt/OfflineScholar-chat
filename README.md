@@ -232,7 +232,7 @@ win over the file.
 | `OS_CHUNK_WORDS` | `160` | Words per indexed chunk |
 | `OS_CHUNK_OVERLAP` | `30` | Words shared by neighbouring chunks |
 | `OS_LOW_MEMORY` | auto | `1` forces low-RAM mode, `0` turns it off |
-| `OS_NUM_PREDICT` | `384` (`192` on low-RAM machines) | Maximum tokens in one answer (lower is lighter) |
+| `OS_NUM_PREDICT` | `512` (`256` on low-RAM machines) | Maximum tokens in one answer (lower is lighter) |
 | `OS_NUM_THREAD` | half the CPUs (`3` on a 4-core low-RAM machine) | CPU threads used by the model; lower keeps the desktop responsive |
 | `OS_NUM_BATCH` | `128` (`64` on low-RAM machines) | Prompt batch size (lower uses less peak memory) |
 | `OS_KEEP_ALIVE` | `30m` | How long the model stays loaded while the app is running; `stop` unloads it immediately |
@@ -333,7 +333,7 @@ not need Tk and will continue to work.
 
 The model is being loaded into RAM. After that it stays warm while the app is running. On
 low-RAM machines OfflineScholar automatically uses a shorter prompt, a 1024-token context,
-192-token answers, four messages of history and smaller prompt batches, so the first token
+256-token answers, four messages of history and smaller prompt batches, so the first token
 appears sooner. Close unused browser tabs and run `offlinescholar stop` when you are finished
 to release the model memory.
 
@@ -353,8 +353,9 @@ remembers that choice. It is about 400 MB instead of 806 MB and is much faster o
 Keep the browser to one tab and close other heavy apps (especially Chrome and Spotify) while
 you use it.
 
-Answers are shorter on low-RAM machines (about 140 words) to avoid long waits. If you need a
-longer answer, raise `OS_NUM_PREDICT`, or use `OS_NUM_PREDICT=384 offlinescholar restart`.
+Answers that reach the token limit stop at a full stop instead of being cut mid-sentence.
+On low-RAM machines answers are shorter (about 180 words) to avoid long waits. If you need a
+longer answer, raise `OS_NUM_PREDICT`, or use `OS_NUM_PREDICT=512 offlinescholar restart`.
 
 ## License
 

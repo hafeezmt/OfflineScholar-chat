@@ -1,4 +1,5 @@
 """All calls to the local Ollama server (chat model and the notes embedding model)."""
+import re
 from pathlib import Path
 
 import ollama
@@ -83,6 +84,29 @@ FAST_NONE = "Answer from general knowledge. Do not mention the notes unless aske
 
 FAST_NO_SEARCH = "Notes were not searched. Do not cite them unless asked."
 
+
+def answer_word_limit():
+    """Word budget that leaves room to finish the last sentence before the token cap."""
+    return max(50, int(config.NUM_PREDICT * 0.45))
+
+
+def _length_rule(limit):
+    return f"Keep the answer under {limit} words. Stop at a full stop."
+
+
+_SENTENCE_END = re.compile(r"[.!?\u2026](?:[\"'\)\]]*)(?=\s|$)")
+
+
+def _split_complete(text):
+    """Split text into the longest complete-sentence prefix and the unfinished tail."""
+    end = None
+    for match in _SENTENCE_END.finditer(text):
+        end = match.end()
+    if end is None:
+        return "", text
+    return text[:end], text[end:]
+
+
 def list_models():
     """Names of the models installed in Ollama, or [] when Ollama is not reachable."""
     try:
@@ -152,7 +176,7 @@ def build_system(mode="Just chat", language="English", passages=None, source="no
         )
 
     if config.LOW_MEMORY:
-        parts = [FAST_SYSTEM]
+        parts = [FAST_SYSTEM, _length_rule(answer_word_limit())]
         if mode != "Just chat":
             parts.append(MODES.get(mode, MODES["Just chat"]))
         if language != "English":
@@ -171,7 +195,8 @@ def build_system(mode="Just chat", language="English", passages=None, source="no
         return "\n\n".join(parts)
 
     parts = [BASE_SYSTEM, MODES.get(mode, MODES["Just chat"]),
-             LANGUAGES.get(language, LANGUAGES["English"])]
+             LANGUAGES.get(language, LANGUAGES["English"]),
+             _length_rule(answer_word_limit())]
     if passages is None:
         parts.append(NO_SEARCH_RULES)
     elif passages:
@@ -187,8 +212,13 @@ def build_system(mode="Just chat", language="English", passages=None, source="no
 
 
 def chat_stream(history, message, mode="Just chat", language="English", passages=None, model=None,
-                source="notes"):
-    """history: list of {"role","content"} dicts. Yields the reply piece by piece."""
+                source="notes", meta=None):
+    """history: list of {"role","content"} dicts. Yields the reply piece by piece.
+
+    Only complete sentences are yielded while the model speaks, so a reply that
+    reaches the token cap never ends in the middle of a sentence. `meta`, when
+    given, receives `done_reason` and `truncated` for the caller.
+    """
     model = model or config.CHAT_MODEL
     messages = [{"role": "system", "content": build_system(mode, language, passages, source)}]
     messages += trim_history(history, config.HISTORY_LIMIT)
@@ -208,8 +238,25 @@ def chat_stream(history, message, mode="Just chat", language="English", passages
             "num_batch": config.NUM_BATCH,
         },
     )
+    reason = None
+    buffer = ""
     for part in stream:
-        yield part["message"]["content"]
+        piece = part["message"]["content"]
+        if piece:
+            buffer += piece
+            ready, buffer = _split_complete(buffer)
+            if ready:
+                yield ready
+        if part.get("done"):
+            reason = part.get("done_reason")
+    if reason == "length":
+        if meta is not None:
+            meta["truncated"] = True
+        yield "\n\n_(The answer reached the length limit. Ask \"continue\" for the rest.)_"
+    elif buffer:
+        yield buffer
+    if meta is not None:
+        meta["done_reason"] = reason
 
 
 def warm_up(model=None):
