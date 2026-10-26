@@ -1049,6 +1049,12 @@ function wireEvents() {
   el.drawerClose.addEventListener("click", closeDrawer);
   el.bannerClose.addEventListener("click", hideBanner);
   el.chatTitle.addEventListener("click", renameActive);
+  el.chatTitle.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      renameActive();
+    }
+  });
   el.exportBtn.addEventListener("click", exportChat);
 
   el.search.addEventListener("input", renderChatList);

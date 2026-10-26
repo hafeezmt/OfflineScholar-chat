@@ -505,7 +505,13 @@ svg {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  cursor: text;
+  cursor: pointer;
+  border-radius: 6px;
+}
+
+.chat-identity h1:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 3px;
 }
 
 .chat-identity p {
