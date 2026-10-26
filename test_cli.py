@@ -39,6 +39,30 @@ class CliTests(unittest.TestCase):
         self.assertIn("1 chat(s).", output.getvalue())
         connection.close.assert_called_once_with()
 
+    def test_delete_removes_an_existing_chat(self):
+        connection = mock.MagicMock()
+        output = io.StringIO()
+        with mock.patch.object(cli.store, "connect", return_value=connection), \
+                mock.patch.object(cli.store, "conversation_exists", return_value=True), \
+                mock.patch.object(cli.store, "delete_conversation") as delete, \
+                contextlib.redirect_stdout(output):
+            code = cli.main(["delete", "7"])
+        self.assertEqual(code, 0)
+        delete.assert_called_once_with(connection, 7)
+        self.assertIn("Deleted chat 7", output.getvalue())
+
+    def test_delete_reports_a_missing_chat(self):
+        connection = mock.MagicMock()
+        output = io.StringIO()
+        with mock.patch.object(cli.store, "connect", return_value=connection), \
+                mock.patch.object(cli.store, "conversation_exists", return_value=False), \
+                mock.patch.object(cli.store, "delete_conversation") as delete, \
+                contextlib.redirect_stdout(output):
+            code = cli.main(["delete", "99"])
+        self.assertEqual(code, 1)
+        delete.assert_not_called()
+        self.assertIn("was not found", output.getvalue())
+
 
 if __name__ == "__main__":
     unittest.main()

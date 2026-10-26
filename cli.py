@@ -61,6 +61,19 @@ def cmd_chats(args):
     return 0
 
 
+def cmd_delete(args):
+    con = store.connect()
+    try:
+        if not store.conversation_exists(con, args.conversation_id):
+            print(f"Chat {args.conversation_id} was not found.")
+            return 1
+        store.delete_conversation(con, args.conversation_id)
+    finally:
+        con.close()
+    print(f"Deleted chat {args.conversation_id}.")
+    return 0
+
+
 def cmd_search(args):
     passages = search.find(args.query)
     if not passages:
@@ -104,6 +117,9 @@ def main(argv=None):
     p_chats = sub.add_parser("chats", help="list saved chats")
     p_chats.add_argument("--limit", type=int, default=20, help="maximum chats to show")
 
+    p_delete = sub.add_parser("delete", help="delete a saved chat")
+    p_delete.add_argument("conversation_id", type=int, help="chat number shown by the chats command")
+
     p_search = sub.add_parser("search", help="search your notes")
     p_search.add_argument("query")
 
@@ -120,6 +136,7 @@ def main(argv=None):
         "index": cmd_index,
         "list": cmd_list,
         "chats": cmd_chats,
+        "delete": cmd_delete,
         "search": cmd_search,
         "ask": cmd_ask,
     }[args.command](args)
