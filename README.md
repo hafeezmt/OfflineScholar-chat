@@ -252,7 +252,7 @@ win over the file.
 - Answers anything: when the notes do not cover a question, the app says so and answers from general knowledge; current or time-sensitive questions get a best-effort answer with an offline caveat
 - Latest-upload summaries and notes quizzes read the newest file, even when the question has no exact keywords
 - Notes library drawer with each file's size and index state, plus re-scan, per-file removal and clear
-- Conversation history in a sidebar: search, rename or delete chats, and reopen them later
+- Conversation history in a sidebar: search, rename, delete or download chats, and reopen them later
 - Model picker, plus automatic low-RAM mode so the laptop stays responsive
 - Light and dark themes, a mobile layout, and example prompts for quick starts
 - Friendly messages when Ollama is not running or the model is not installed

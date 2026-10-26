@@ -41,6 +41,7 @@ const el = {
   clearBtn: $("clearBtn"),
   toast: $("toast"),
   themeBtn: $("themeBtn"),
+  exportBtn: $("exportBtn"),
 };
 
 const memory = {
@@ -828,6 +829,14 @@ function newChat() {
   el.input.focus();
 }
 
+function exportChat() {
+  if (!state.activeId) {
+    toast("Send a message first, then you can download this chat.");
+    return;
+  }
+  window.location.href = "/api/conversations/" + state.activeId + "/export";
+}
+
 async function renameActive() {
   if (!state.activeId) {
     toast("Send a message first, then you can rename this chat.");
@@ -1024,6 +1033,7 @@ function wireEvents() {
   el.drawerClose.addEventListener("click", closeDrawer);
   el.bannerClose.addEventListener("click", hideBanner);
   el.chatTitle.addEventListener("click", renameActive);
+  el.exportBtn.addEventListener("click", exportChat);
 
   el.search.addEventListener("input", renderChatList);
 
