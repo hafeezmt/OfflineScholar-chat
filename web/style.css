@@ -1018,6 +1018,11 @@ svg {
   margin-left: auto;
 }
 
+.hint.limit {
+  color: var(--danger);
+  font-weight: 620;
+}
+
 .hint {
   font-size: 0.7rem;
   color: var(--muted);

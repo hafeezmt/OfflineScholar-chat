@@ -99,6 +99,7 @@ def status():
         "available_memory_gb": config.AVAILABLE_MEMORY_GB,
         "modes": list(llm.MODES),
         "languages": list(llm.LANGUAGES),
+        "max_message_chars": config.MAX_MESSAGE_CHARS,
         "notes": services.notes_summary(),
     }
 

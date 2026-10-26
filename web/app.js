@@ -42,6 +42,7 @@ const el = {
   toast: $("toast"),
   themeBtn: $("themeBtn"),
   exportBtn: $("exportBtn"),
+  inputHint: $("inputHint"),
 };
 
 const memory = {
@@ -393,6 +394,8 @@ async function loadStatus() {
     }
 
     updateSubtitle();
+    if (status.max_message_chars) el.input.maxLength = Number(status.max_message_chars);
+    updateInputHint();
   } catch (error) {
     setStatus("offline", "Server not reachable");
     showBanner(friendlyError(error.message));
@@ -664,6 +667,7 @@ async function sendMessage(preset) {
   if (preset === undefined) {
     el.input.value = "";
     autoGrow();
+    updateInputHint();
   }
 
   appendMessage("user", text);
@@ -787,6 +791,18 @@ async function sendMessage(preset) {
 function autoGrow() {
   el.input.style.height = "auto";
   el.input.style.height = Math.min(el.input.scrollHeight, 180) + "px";
+}
+
+function updateInputHint() {
+  const max = Number((state.status && state.status.max_message_chars) || 20000);
+  const length = el.input.value.length;
+  if (length >= max * 0.8) {
+    el.inputHint.textContent = length.toLocaleString() + " / " + max.toLocaleString() + " characters";
+    el.inputHint.classList.toggle("limit", length >= max);
+  } else {
+    el.inputHint.textContent = "Enter to send · Shift+Enter for a new line";
+    el.inputHint.classList.remove("limit");
+  }
 }
 
 /* ---------- Opening and creating chats ---------- */
@@ -1042,7 +1058,10 @@ function wireEvents() {
     sendMessage();
   });
 
-  el.input.addEventListener("input", autoGrow);
+  el.input.addEventListener("input", () => {
+    autoGrow();
+    updateInputHint();
+  });
   el.input.addEventListener("keydown", (event) => {
     if (event.key === "Enter" && !event.shiftKey && !event.isComposing) {
       event.preventDefault();

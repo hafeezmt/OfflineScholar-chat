@@ -39,6 +39,7 @@ class ServerTests(unittest.TestCase):
         self.assertIn("gemma3:1b", data["models"])
         self.assertIn("Quiz me", data["modes"])
         self.assertIn("Hausa", data["languages"])
+        self.assertEqual(data["max_message_chars"], config.MAX_MESSAGE_CHARS)
 
     def test_conversation_lifecycle(self):
         created = self.client.post("/api/conversations")
