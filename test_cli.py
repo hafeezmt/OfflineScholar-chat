@@ -1,7 +1,9 @@
 """Checks that the terminal front end stays quick to start and picks a model lazily."""
 import contextlib
 import io
+import tempfile
 import unittest
+from pathlib import Path
 from unittest import mock
 
 import cli
@@ -9,6 +11,37 @@ import llm
 
 
 class CliTests(unittest.TestCase):
+    def test_export_prints_markdown(self):
+        connection = mock.MagicMock()
+        output = io.StringIO()
+        with mock.patch.object(cli.store, "connect", return_value=connection), \
+                mock.patch.object(cli.store, "conversation_markdown", return_value="# Physics\n\n**You**\n\nHi\n"), \
+                contextlib.redirect_stdout(output):
+            code = cli.main(["export", "7"])
+        self.assertEqual(code, 0)
+        self.assertEqual(output.getvalue(), "# Physics\n\n**You**\n\nHi\n")
+
+    def test_export_writes_a_file(self):
+        connection = mock.MagicMock()
+        with tempfile.TemporaryDirectory() as tmp, \
+                mock.patch.object(cli.store, "connect", return_value=connection), \
+                mock.patch.object(cli.store, "conversation_markdown", return_value="# Notes\n"), \
+                contextlib.redirect_stdout(io.StringIO()):
+            target = Path(tmp) / "chat.md"
+            code = cli.main(["export", "7", "--output", str(target)])
+            self.assertEqual(code, 0)
+            self.assertEqual(target.read_text(encoding="utf-8"), "# Notes\n")
+
+    def test_export_reports_a_missing_chat(self):
+        connection = mock.MagicMock()
+        output = io.StringIO()
+        with mock.patch.object(cli.store, "connect", return_value=connection), \
+                mock.patch.object(cli.store, "conversation_markdown", return_value=None), \
+                contextlib.redirect_stdout(output):
+            code = cli.main(["export", "99"])
+        self.assertEqual(code, 1)
+        self.assertIn("was not found", output.getvalue())
+
     def test_help_does_not_probe_ollama(self):
         with mock.patch.object(llm, "default_model") as default_model:
             with contextlib.redirect_stdout(io.StringIO()), self.assertRaises(SystemExit) as raised:

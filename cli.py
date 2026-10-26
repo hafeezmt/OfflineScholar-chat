@@ -74,6 +74,27 @@ def cmd_delete(args):
     return 0
 
 
+def cmd_export(args):
+    con = store.connect()
+    try:
+        markdown = store.conversation_markdown(con, args.conversation_id)
+    finally:
+        con.close()
+    if markdown is None:
+        print(f"Chat {args.conversation_id} was not found.")
+        return 1
+    if args.output:
+        try:
+            Path(args.output).write_text(markdown, encoding="utf-8")
+        except OSError as e:
+            print(f"Could not write {args.output}: {e}")
+            return 1
+        print(f"Exported chat {args.conversation_id} to {args.output}.")
+    else:
+        print(markdown, end="")
+    return 0
+
+
 def cmd_search(args):
     passages = search.find(args.query)
     if not passages:
@@ -120,6 +141,10 @@ def main(argv=None):
     p_delete = sub.add_parser("delete", help="delete a saved chat")
     p_delete.add_argument("conversation_id", type=int, help="chat number shown by the chats command")
 
+    p_export = sub.add_parser("export", help="export a saved chat as Markdown")
+    p_export.add_argument("conversation_id", type=int, help="chat number shown by the chats command")
+    p_export.add_argument("-o", "--output", default=None, help="write to a file instead of printing")
+
     p_search = sub.add_parser("search", help="search your notes")
     p_search.add_argument("query")
 
@@ -137,6 +162,7 @@ def main(argv=None):
         "list": cmd_list,
         "chats": cmd_chats,
         "delete": cmd_delete,
+        "export": cmd_export,
         "search": cmd_search,
         "ask": cmd_ask,
     }[args.command](args)
