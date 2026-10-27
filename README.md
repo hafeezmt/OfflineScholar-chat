@@ -269,6 +269,34 @@ win over the file.
 
 Set `OS_EXTRACTIVE_RAG=0` to always let the model write the answer from notes (slower, and small models may forget citations).
 
+## HTTP API
+
+The local server also exposes a small JSON API on `127.0.0.1`. It is useful for
+scripts, the desktop app and the tests.
+
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/api/health` | Lightweight readiness check |
+| `GET` | `/api/status` | Models, modes, languages and note summary |
+| `GET` | `/api/conversations` | List chats with previews and message counts |
+| `POST` | `/api/conversations` | Start a new chat |
+| `DELETE` | `/api/conversations` | Delete every chat |
+| `GET` | `/api/conversations/{id}` | Read one chat and its messages |
+| `PATCH` | `/api/conversations/{id}` | Rename a chat |
+| `DELETE` | `/api/conversations/{id}` | Delete one chat |
+| `GET` | `/api/conversations/{id}/export` | Download a chat as Markdown |
+| `POST` | `/api/chat` | Stream an answer as server-sent events |
+| `GET` | `/api/notes` | List the notes library and index state |
+| `GET` | `/api/notes/search?q=...&limit=...` | Search indexed note passages |
+| `POST` | `/api/notes/upload` | Upload one or more notes |
+| `POST` | `/api/notes/url` | Save a web page for offline reading |
+| `DELETE` | `/api/notes?name=...` | Remove one note |
+| `POST` | `/api/notes/rescan` | Index new or changed notes |
+| `POST` | `/api/notes/clear` | Clear the search index |
+
+Chat answers stream as `data:` frames with `start`, `token`, `sources`, `error`
+and `done` events. The notes search limit is clamped to 20.
+
 ## Terminal tools
 
 The browser is optional. The same library and models work from the terminal:
