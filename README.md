@@ -344,6 +344,33 @@ python eval_quality.py --models gemma3:1b qwen2.5:1.5b --verbose
 fallback, notes coverage, false premises and caveated time-sensitive answers. It exits
 non-zero on failure, so it can be used before a release.
 
+## Development
+
+Clone the repository and install the test dependencies:
+
+```bash
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements-dev.txt
+```
+
+Run the checks before sending a pull request:
+
+```bash
+python test_core.py
+python -m unittest test_features test_server test_rag test_manage test_cli test_store test_config
+```
+
+`requirements-dev.txt` adds `httpx`, which the FastAPI test client needs; the runtime
+requirements stay in `requirements.txt`. The main modules are:
+
+- `server.py` — FastAPI routes and the SSE chat stream
+- `services.py` — shared upload, retrieval and answer logic
+- `store.py` — SQLite chats, notes and search
+- `llm.py` — Ollama prompts and generation
+- `web/` — the offline front end
+- `cli.py` and `manage.py` — terminal and start/stop commands
+
 ## Troubleshooting
 
 ### `offlinescholar: command not found`
