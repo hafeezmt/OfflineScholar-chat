@@ -65,6 +65,20 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(self.client.get(f"/api/conversations/{conversation_id}").status_code, 404)
         self.assertEqual(self.client.delete(f"/api/conversations/{conversation_id}").status_code, 404)
 
+    def test_conversation_list_includes_message_counts(self):
+        conversation_id = self.client.post("/api/conversations").json()["id"]
+        con = store.connect(self.db)
+        try:
+            store.append_message(con, conversation_id, "user", "What is force?")
+            store.append_message(con, conversation_id, "assistant", "A push or a pull.")
+        finally:
+            con.close()
+
+        listed = self.client.get("/api/conversations").json()["conversations"]
+
+        self.assertEqual(listed[0]["id"], conversation_id)
+        self.assertEqual(listed[0]["messages"], 2)
+
     def test_export_a_conversation_as_markdown(self):
         conversation_id = self.client.post("/api/conversations").json()["id"]
         con = store.connect(self.db)
