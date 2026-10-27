@@ -55,6 +55,14 @@ def notes_summary():
     }
 
 
+def search_notes(query, limit=None):
+    """Find note passages for a search box, without changing the index."""
+    query = (query or "").strip()
+    if not query:
+        return []
+    return search.find(query, limit=max(1, limit or config.TOP_K))
+
+
 def add_upload(filename, data):
     """Store one uploaded file. Returns (message, saved_name) where saved_name may be None."""
     name = Path(filename or "").name

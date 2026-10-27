@@ -155,6 +155,17 @@ class PromptTests(unittest.TestCase):
         self.assertIn("Stop at a full stop.", prompt)
         self.assertIn(str(llm.answer_word_limit()), prompt)
 
+    def test_notes_search_rejects_an_empty_query(self):
+        with mock.patch.object(search, "find") as find:
+            self.assertEqual(services.search_notes("   "), [])
+        find.assert_not_called()
+
+    def test_notes_search_passes_a_bounded_limit(self):
+        hit = passage(1, "Photosynthesis makes food.", score=0.9)
+        with mock.patch.object(search, "find", return_value=[hit]) as find:
+            self.assertEqual(services.search_notes("photosynthesis", limit=3), [hit])
+        find.assert_called_once_with("photosynthesis", limit=3)
+
     def test_citation_verifier_catches_invented_sources(self):
         result = services.verify_answer("Answer [1] and [7]", [passage(1, "evidence")])
         self.assertEqual(result["citations"], [1])
