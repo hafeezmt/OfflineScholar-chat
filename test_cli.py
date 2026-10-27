@@ -33,6 +33,13 @@ class CliTests(unittest.TestCase):
             self.assertEqual(code, 0)
             self.assertEqual(target.read_text(encoding="utf-8"), "# Notes\n")
 
+    def test_search_passes_the_limit(self):
+        with mock.patch.object(cli.search, "find", return_value=[]) as find, \
+                contextlib.redirect_stdout(io.StringIO()):
+            code = cli.main(["search", "photosynthesis", "--limit", "2"])
+        self.assertEqual(code, 1)
+        find.assert_called_once_with("photosynthesis", limit=2)
+
     def test_config_shows_the_effective_settings(self):
         output = io.StringIO()
         settings = {"chat_model": "gemma3:1b", "embed_model": "embed:33m", "port": 7860}

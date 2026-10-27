@@ -150,7 +150,7 @@ def cmd_config(args):
 
 
 def cmd_search(args):
-    passages = search.find(args.query)
+    passages = search.find(args.query, limit=args.limit)
     if not passages:
         print("No matching notes. Try `python cli.py index` after adding files.")
         return 1
@@ -207,6 +207,8 @@ def main(argv=None):
 
     p_search = sub.add_parser("search", help="search your notes")
     p_search.add_argument("query")
+    p_search.add_argument("--limit", type=int, default=config.TOP_K,
+                          help="maximum passages to show")
 
     p_ask = sub.add_parser("ask", help="ask the local model a question")
     p_ask.add_argument("message")
