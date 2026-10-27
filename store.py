@@ -137,14 +137,16 @@ def list_conversations(con, limit=100):
     rows = con.execute(
         """
         SELECT c.id, c.title, c.updated,
-               (SELECT m.content FROM messages m WHERE m.conversation_id=c.id ORDER BY m.id DESC LIMIT 1)
+               (SELECT m.content FROM messages m WHERE m.conversation_id=c.id ORDER BY m.id DESC LIMIT 1),
+               (SELECT COUNT(*) FROM messages m WHERE m.conversation_id=c.id)
         FROM conversations c
         ORDER BY c.updated DESC
         LIMIT ?
         """,
         (limit,),
     ).fetchall()
-    return [{"id": r[0], "title": r[1], "updated": r[2], "preview": (r[3] or "")[:140]} for r in rows]
+    return [{"id": r[0], "title": r[1], "updated": r[2],
+             "preview": (r[3] or "")[:140], "messages": r[4]} for r in rows]
 
 
 def conversation_messages(con, conversation_id, limit=None):
