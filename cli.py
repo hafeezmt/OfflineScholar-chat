@@ -1,5 +1,6 @@
 """Terminal front end: index your notes, search them, and chat without the web UI."""
 import argparse
+import json
 import sys
 import time
 from pathlib import Path
@@ -51,6 +52,9 @@ def cmd_chats(args):
         conversations = store.list_conversations(con, limit=args.limit)
     finally:
         con.close()
+    if getattr(args, "json", False):
+        print(json.dumps(conversations, indent=2))
+        return 0
     if not conversations:
         print("No saved chats yet. Ask a question to start one.")
         return 0
@@ -137,6 +141,7 @@ def main(argv=None):
 
     p_chats = sub.add_parser("chats", help="list saved chats")
     p_chats.add_argument("--limit", type=int, default=20, help="maximum chats to show")
+    p_chats.add_argument("--json", action="store_true", help="print JSON for scripts")
 
     p_delete = sub.add_parser("delete", help="delete a saved chat")
     p_delete.add_argument("conversation_id", type=int, help="chat number shown by the chats command")

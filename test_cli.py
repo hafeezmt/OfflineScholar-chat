@@ -1,6 +1,7 @@
 """Checks that the terminal front end stays quick to start and picks a model lazily."""
 import contextlib
 import io
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -71,6 +72,18 @@ class CliTests(unittest.TestCase):
         self.assertIn("Physics revision", output.getvalue())
         self.assertIn("1 chat(s).", output.getvalue())
         connection.close.assert_called_once_with()
+
+    def test_chats_can_print_json(self):
+        conversation = {"id": 7, "title": "Physics revision", "updated": 0,
+                        "preview": "Newton", "messages": 2}
+        connection = mock.MagicMock()
+        output = io.StringIO()
+        with mock.patch.object(cli.store, "connect", return_value=connection), \
+                mock.patch.object(cli.store, "list_conversations", return_value=[conversation]), \
+                contextlib.redirect_stdout(output):
+            code = cli.main(["chats", "--json"])
+        self.assertEqual(code, 0)
+        self.assertEqual(json.loads(output.getvalue())[0]["messages"], 2)
 
     def test_delete_removes_an_existing_chat(self):
         connection = mock.MagicMock()
