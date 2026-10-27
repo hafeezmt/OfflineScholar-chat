@@ -42,6 +42,18 @@ class ConversationMarkdownTests(unittest.TestCase):
         self.assertEqual(listed[0]["id"], conversation_id)
         self.assertEqual(listed[0]["messages"], 2)
 
+    def test_clear_conversations_removes_every_chat_and_message(self):
+        first = store.create_conversation(self.con, "Physics")
+        second = store.create_conversation(self.con, "Chemistry")
+        store.append_message(self.con, first, "user", "one")
+        store.append_message(self.con, second, "user", "two")
+
+        self.assertEqual(store.clear_conversations(self.con), 2)
+
+        self.assertEqual(store.list_conversations(self.con), [])
+        self.assertEqual(
+            self.con.execute("SELECT COUNT(*) FROM messages").fetchone()[0], 0)
+
     def test_an_unknown_conversation_returns_none(self):
         self.assertIsNone(store.conversation_markdown(self.con, 9999))
 

@@ -188,6 +188,13 @@ def delete_conversation(con, conversation_id):
     con.commit()
 
 
+def clear_conversations(con):
+    """Delete every saved conversation and return how many were removed."""
+    deleted = con.execute("DELETE FROM conversations").rowcount
+    con.commit()
+    return deleted
+
+
 def get_meta(con, key, default=None):
     row = con.execute("SELECT value FROM meta WHERE key=?", (key,)).fetchone()
     return row[0] if row else default
