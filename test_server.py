@@ -118,6 +118,33 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(response.status_code, 404)
         self.assertEqual(response.json()["detail"], "Conversation not found")
 
+    def test_chat_rejects_an_empty_message(self):
+        response = self.client.post("/api/chat", json={"message": "   "})
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["detail"], "Message cannot be empty")
+
+    def test_rename_rejects_an_empty_title(self):
+        conversation_id = self.client.post("/api/conversations").json()["id"]
+        response = self.client.patch(
+            f"/api/conversations/{conversation_id}", json={"title": "   "})
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["detail"], "Title cannot be empty")
+
+    def test_notes_search_clamps_the_limit(self):
+        with mock.patch.object(server.services, "search_notes", return_value=[]) as search:
+            response = self.client.get(
+                "/api/notes/search", params={"q": "cells", "limit": 999})
+        self.assertEqual(response.status_code, 200)
+        search.assert_called_once_with("cells", 20)
+
+    def test_export_filename_is_safe(self):
+        conversation_id = self.client.post("/api/conversations").json()["id"]
+        self.client.patch(
+            f"/api/conversations/{conversation_id}", json={"title": "Physics / Revision?"})
+        response = self.client.get(f"/api/conversations/{conversation_id}/export")
+        self.assertIn('filename="offlinescholar-physics-revision.md"',
+                      response.headers["content-disposition"])
+
     def test_chat_rejects_an_oversized_message(self):
         with mock.patch.object(config, "MAX_MESSAGE_CHARS", 10):
             response = self.client.post("/api/chat", json={"message": "x" * 11})
