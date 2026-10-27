@@ -1,6 +1,7 @@
 """Terminal front end: index your notes, search them, and chat without the web UI."""
 import argparse
 import json
+import re
 import sys
 import time
 from pathlib import Path
@@ -99,6 +100,43 @@ def cmd_export(args):
     return 0
 
 
+def _chat_slug(title, fallback):
+    slug = re.sub(r"[^a-z0-9]+", "-", (title or "").lower()).strip("-")[:50]
+    return slug or fallback
+
+
+def cmd_export_all(args):
+    con = store.connect()
+    try:
+        conversations = store.list_conversations(con, limit=1000)
+        items = [(conversation, store.conversation_markdown(con, conversation["id"]))
+                 for conversation in conversations]
+    finally:
+        con.close()
+    if not items:
+        print("No saved chats to export.")
+        return 0
+    folder = Path(args.folder)
+    try:
+        folder.mkdir(parents=True, exist_ok=True)
+    except OSError as e:
+        print(f"Could not create {folder}: {e}")
+        return 1
+    written = 0
+    for conversation, markdown in items:
+        if markdown is None:
+            continue
+        name = f'{conversation["id"]}-{_chat_slug(conversation["title"], "chat")}.md'
+        try:
+            (folder / name).write_text(markdown, encoding="utf-8")
+        except OSError as e:
+            print(f"Could not write {name}: {e}")
+            return 1
+        written += 1
+    print(f"Exported {written} chat(s) to {folder}.")
+    return 0
+
+
 def cmd_search(args):
     passages = search.find(args.query)
     if not passages:
@@ -150,6 +188,9 @@ def main(argv=None):
     p_export.add_argument("conversation_id", type=int, help="chat number shown by the chats command")
     p_export.add_argument("-o", "--output", default=None, help="write to a file instead of printing")
 
+    p_export_all = sub.add_parser("export-all", help="export every saved chat as Markdown")
+    p_export_all.add_argument("folder", help="folder to write the Markdown files into")
+
     p_search = sub.add_parser("search", help="search your notes")
     p_search.add_argument("query")
 
@@ -168,6 +209,7 @@ def main(argv=None):
         "chats": cmd_chats,
         "delete": cmd_delete,
         "export": cmd_export,
+        "export-all": cmd_export_all,
         "search": cmd_search,
         "ask": cmd_ask,
     }[args.command](args)

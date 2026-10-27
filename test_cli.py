@@ -33,6 +33,24 @@ class CliTests(unittest.TestCase):
             self.assertEqual(code, 0)
             self.assertEqual(target.read_text(encoding="utf-8"), "# Notes\n")
 
+    def test_export_all_writes_one_file_per_chat(self):
+        conversations = [
+            {"id": 1, "title": "Physics revision", "updated": 0, "preview": "", "messages": 2},
+            {"id": 2, "title": "Chemistry", "updated": 0, "preview": "", "messages": 1},
+        ]
+        markdown = {"1": "# Physics\n", "2": "# Chemistry\n"}
+        connection = mock.MagicMock()
+        with tempfile.TemporaryDirectory() as tmp, \
+                mock.patch.object(cli.store, "connect", return_value=connection), \
+                mock.patch.object(cli.store, "list_conversations", return_value=conversations), \
+                mock.patch.object(cli.store, "conversation_markdown",
+                                  side_effect=lambda _con, chat_id: markdown[str(chat_id)]), \
+                contextlib.redirect_stdout(io.StringIO()):
+            code = cli.main(["export-all", tmp])
+            self.assertEqual(code, 0)
+            self.assertEqual((Path(tmp) / "1-physics-revision.md").read_text(), "# Physics\n")
+            self.assertEqual((Path(tmp) / "2-chemistry.md").read_text(), "# Chemistry\n")
+
     def test_export_reports_a_missing_chat(self):
         connection = mock.MagicMock()
         output = io.StringIO()
