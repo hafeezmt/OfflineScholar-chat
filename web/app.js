@@ -447,11 +447,18 @@ function renderChatList() {
     preview.textContent = firstLine(conversation.preview) || "No messages yet";
     text.append(title, preview);
 
+    const meta = document.createElement("span");
+    meta.className = "chat-meta";
     const time = document.createElement("span");
     time.className = "chat-time";
     time.textContent = timeAgo(conversation.updated);
+    const count = document.createElement("span");
+    count.className = "chat-count";
+    const messages = Number(conversation.messages) || 0;
+    count.textContent = messages + (messages === 1 ? " msg" : " msgs");
+    meta.append(time, count);
 
-    button.append(badge, text, time);
+    button.append(badge, text, meta);
     button.addEventListener("click", () => openConversation(conversation.id, { focus: true }));
 
     const remove = document.createElement("button");

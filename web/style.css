@@ -274,12 +274,14 @@ svg {
 
 .chat-item.active .chat-item-btn,
 .chat-item.active .chat-preview,
-.chat-item.active .chat-time {
+.chat-item.active .chat-time,
+.chat-item.active .chat-count {
   color: var(--brand-contrast);
 }
 
 .chat-item.active .chat-preview,
-.chat-item.active .chat-time {
+.chat-item.active .chat-time,
+.chat-item.active .chat-count {
   opacity: 0.78;
 }
 
@@ -337,8 +339,21 @@ svg {
   color: var(--muted);
 }
 
+.chat-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
 .chat-time {
   font-size: 0.68rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.chat-count {
+  font-size: 0.64rem;
   color: var(--muted);
   white-space: nowrap;
 }
