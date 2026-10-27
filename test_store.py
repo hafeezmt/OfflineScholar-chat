@@ -6,6 +6,13 @@ from pathlib import Path
 import store
 
 
+class TitleTests(unittest.TestCase):
+    def test_titles_are_collapsed_and_capped(self):
+        self.assertEqual(store.clean_title("  Physics   revision "), "Physics revision")
+        self.assertEqual(store.clean_title("x" * 100, limit=10), "x" * 10)
+        self.assertEqual(store.clean_title(None), "")
+
+
 class ConversationMarkdownTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()

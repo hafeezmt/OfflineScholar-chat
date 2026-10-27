@@ -121,6 +121,11 @@ def hybrid_search(con, query, qvec, k):
     return [items[i] for i in best]
 
 
+def clean_title(value, limit=80):
+    """Collapse whitespace in a chat title and cap its length."""
+    return " ".join((value or "").split())[:limit]
+
+
 def create_conversation(con, title):
     now = time.time()
     cur = con.execute("INSERT INTO conversations(title, created, updated) VALUES (?,?,?)",

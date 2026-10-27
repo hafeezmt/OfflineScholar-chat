@@ -566,5 +566,5 @@ def friendly_error(error, model=None):
 
 
 def title_for(message):
-    title = " ".join((message or "").split())
+    title = store.clean_title(message)
     return (title[:60] + "...") if len(title) > 60 else (title or "New chat")

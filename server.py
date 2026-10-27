@@ -176,7 +176,7 @@ def export_conversation(conversation_id: int):
 
 @app.patch("/api/conversations/{conversation_id}")
 def rename_conversation(conversation_id: int, request: RenameRequest):
-    title = " ".join(request.title.split())[:80]
+    title = store.clean_title(request.title)
     if not title:
         raise HTTPException(status_code=400, detail="Title cannot be empty")
     con = store.connect()
