@@ -442,6 +442,15 @@ svg {
   background: var(--brand-soft);
 }
 
+.foot-btn.danger-text {
+  color: var(--danger);
+}
+
+.foot-btn.danger-text:hover {
+  border-color: var(--danger);
+  background: var(--danger-soft);
+}
+
 .foot-btn .count {
   margin-left: auto;
   min-width: 22px;

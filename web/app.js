@@ -43,6 +43,7 @@ const el = {
   themeBtn: $("themeBtn"),
   exportBtn: $("exportBtn"),
   inputHint: $("inputHint"),
+  clearChatsBtn: $("clearChatsBtn"),
 };
 
 const memory = {
@@ -852,6 +853,22 @@ function newChat() {
   el.input.focus();
 }
 
+async function clearAllChats() {
+  if (!state.conversations.length) {
+    toast("There are no saved chats.");
+    return;
+  }
+  if (!window.confirm("Delete all saved chats? This cannot be undone.")) return;
+  try {
+    const data = await api("/api/conversations", { method: "DELETE" });
+    newChat();
+    await loadConversations();
+    toast(data.deleted ? "Deleted " + data.deleted + " chat(s)" : "No chats to delete");
+  } catch (error) {
+    toast(friendlyError(error.message));
+  }
+}
+
 function exportChat() {
   if (!state.activeId) {
     toast("Send a message first, then you can download this chat.");
@@ -1063,6 +1080,7 @@ function wireEvents() {
     }
   });
   el.exportBtn.addEventListener("click", exportChat);
+  el.clearChatsBtn.addEventListener("click", clearAllChats);
 
   el.search.addEventListener("input", renderChatList);
 
