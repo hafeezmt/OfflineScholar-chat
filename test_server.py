@@ -31,6 +31,11 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(self.client.get("/static/custom.css").status_code, 200)
         self.assertEqual(self.client.get("/favicon.svg").status_code, 200)
 
+    def test_health_endpoint_is_available_without_ollama(self):
+        response = self.client.get("/api/health")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"status": "ok"})
+
     def test_status_reports_models_and_modes(self):
         with mock.patch.object(server.llm, "list_models", return_value=["gemma3:1b"]), \
                 mock.patch.object(server.services, "notes_summary", return_value={"files": 0, "indexed": 0, "size": 0}):

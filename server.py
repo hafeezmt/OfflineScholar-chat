@@ -87,6 +87,11 @@ def favicon():
     return FileResponse(WEB_DIR / "favicon.svg")
 
 
+@app.get("/api/health")
+def health():
+    return {"status": "ok"}
+
+
 @app.get("/api/status")
 def status():
     models = _chat_models()
