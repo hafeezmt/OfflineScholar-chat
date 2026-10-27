@@ -1160,6 +1160,10 @@ function wireEvents() {
       el.search.focus();
       el.search.select();
     }
+    if (event.altKey && event.key.toLowerCase() === "n") {
+      event.preventDefault();
+      newChat();
+    }
   });
 
   window.addEventListener("resize", () => {
