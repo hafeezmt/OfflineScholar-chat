@@ -1,4 +1,7 @@
 """Tests for the start/stop command helpers. No server is started."""
+import contextlib
+import io
+import json
 import os
 import tempfile
 import unittest
@@ -69,6 +72,55 @@ class ProcessTests(unittest.TestCase):
 
     def test_url_uses_port(self):
         self.assertEqual(manage.server_url(9000), "http://127.0.0.1:9000")
+
+
+class CommandLineTests(unittest.TestCase):
+    def test_up_passes_the_port_and_no_open_flag(self):
+        with mock.patch.object(manage, "start",
+                               return_value=("http://127.0.0.1:9000", True, {})) as start, \
+                contextlib.redirect_stdout(io.StringIO()):
+            code = manage.main(["up", "--port", "9000", "--no-open"])
+        self.assertEqual(code, 0)
+        start.assert_called_once_with(port=9000, open_browser=False)
+
+    def test_stop_passes_the_port(self):
+        with mock.patch.object(manage, "stop", return_value=True) as stop, \
+                contextlib.redirect_stdout(io.StringIO()):
+            code = manage.main(["stop", "--port", "9000"])
+        self.assertEqual(code, 0)
+        stop.assert_called_once_with(port=9000)
+
+    def test_restart_uses_the_port_for_both_steps(self):
+        with mock.patch.object(manage, "stop") as stop, \
+                mock.patch.object(manage, "start",
+                                  return_value=("http://127.0.0.1:9000", True, {})) as start, \
+                contextlib.redirect_stdout(io.StringIO()):
+            code = manage.main(["restart", "--port", "9000"])
+        self.assertEqual(code, 0)
+        stop.assert_called_once_with(port=9000)
+        start.assert_called_once_with(port=9000, open_browser=True)
+
+    def test_status_json_reports_a_stopped_app(self):
+        output = io.StringIO()
+        with mock.patch.object(manage, "fetch_status", return_value=None), \
+                contextlib.redirect_stdout(output):
+            code = manage.main(["status", "--json", "--port", "9000"])
+        self.assertEqual(code, 0)
+        payload = json.loads(output.getvalue())
+        self.assertFalse(payload["running"])
+        self.assertEqual(payload["url"], "http://127.0.0.1:9000")
+
+    def test_status_json_includes_the_live_server_fields(self):
+        output = io.StringIO()
+        with mock.patch.object(manage, "fetch_status",
+                               return_value={"model": "gemma3:1b", "low_memory": True}), \
+                contextlib.redirect_stdout(output):
+            code = manage.main(["status", "--json"])
+        self.assertEqual(code, 0)
+        payload = json.loads(output.getvalue())
+        self.assertTrue(payload["running"])
+        self.assertEqual(payload["model"], "gemma3:1b")
+        self.assertTrue(payload["low_memory"])
 
 
 if __name__ == "__main__":
