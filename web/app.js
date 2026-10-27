@@ -1155,6 +1155,11 @@ function wireEvents() {
 
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") closeAllOverlays();
+    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+      event.preventDefault();
+      el.search.focus();
+      el.search.select();
+    }
   });
 
   window.addEventListener("resize", () => {
