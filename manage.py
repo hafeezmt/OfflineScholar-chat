@@ -279,9 +279,15 @@ def main(argv=None):
     commands = parser.add_subparsers(dest="command")
     up = commands.add_parser("up", aliases=["start"], help="start the app and open it")
     up.add_argument("--no-open", action="store_true", help="do not open the browser")
-    commands.add_parser("stop", aliases=["down", "quit", "kill"], help="stop the app and unload models")
-    commands.add_parser("restart", help="restart the app")
-    commands.add_parser("status", aliases=["ps"], help="show whether the app is running")
+    up.add_argument("--port", type=int, help="port to use for this run")
+    stop_parser = commands.add_parser("stop", aliases=["down", "quit", "kill"],
+                                      help="stop the app and unload models")
+    stop_parser.add_argument("--port", type=int, help="port of the running app")
+    restart = commands.add_parser("restart", help="restart the app")
+    restart.add_argument("--port", type=int, help="port to use for this run")
+    status_parser = commands.add_parser("status", aliases=["ps"],
+                                        help="show whether the app is running")
+    status_parser.add_argument("--port", type=int, help="port of the running app")
     args = parser.parse_args(argv)
 
     if not args.command:
@@ -289,21 +295,21 @@ def main(argv=None):
         return 0
     try:
         if args.command in {"up", "start"}:
-            url, started, _ = start(open_browser=not args.no_open)
+            url, started, _ = start(port=args.port, open_browser=not args.no_open)
             print(f"OfflineScholar is {'running' if started else 'already running'} at {url}")
             print("Stop it with: offlinescholar stop")
         elif args.command in {"stop", "down", "quit", "kill"}:
-            stopped = stop()
+            stopped = stop(port=args.port)
             print("OfflineScholar stopped and models unloaded." if stopped
                   else "OfflineScholar is already stopped.")
         elif args.command == "restart":
-            stop()
-            url, _, _ = start(open_browser=True)
+            stop(port=args.port)
+            url, _, _ = start(port=args.port, open_browser=True)
             print(f"OfflineScholar restarted at {url}")
         elif args.command in {"status", "ps"}:
-            status = fetch_status()
+            status = fetch_status(args.port)
             if status:
-                print(f"OfflineScholar is running at {server_url()}")
+                print(f"OfflineScholar is running at {server_url(args.port)}")
                 print(f"Model: {status.get('model')}")
                 print("Stop it with: offlinescholar stop")
             else:
