@@ -144,6 +144,18 @@ OS_PORT=7861 offlinescholar up
 The desktop app uses the port saved during installation (normally `7860`). To change the
 desktop app's port permanently, rerun the installer with `OS_PORT=7861`.
 
+The same flag works for `stop`, `restart` and `status`, so a one-off session does not need
+environment variables:
+
+```bash
+offlinescholar up --port 7861
+offlinescholar status --port 7861 --json
+offlinescholar stop --port 7861
+```
+
+`status --json` prints a machine-readable object with `running`, `url`, `model` and the
+other status fields.
+
 ## Desktop app
 
 The installer also installs a small desktop app for people who do not want to use a terminal.
@@ -240,6 +252,8 @@ win over the file.
 | `OS_WARMUP` | `1` | Preload the chat model at startup |
 | `OS_HOST` | `127.0.0.1` | Address the web app listens on (keep it local unless you know what you are doing) |
 | `OS_PORT` | `7860` | Port for the web app |
+| `OS_LIBRARY_DIR` | `library/` beside the app | Folder scanned for notes |
+| `OS_DB_PATH` | `scholar.db` beside the app | SQLite file for chats and the notes index |
 | `OS_SKIP_DESKTOP` | `0` | Set to `1` during installation to skip the desktop app |
 
 ## Features
@@ -307,8 +321,12 @@ python cli.py list                           # show files and index state
 python cli.py search "photosynthesis"        # find matching passages
 python cli.py ask "explain Newton's second law" --mode "Explain simply"
 python cli.py chats                          # list saved chats
+python cli.py chats --json                   # machine-readable chat list
 python cli.py export 1 --output chat.md      # save a chat as Markdown
+python cli.py export-all ./chats             # save every chat as Markdown
 python cli.py delete 1                       # delete a saved chat
+python cli.py config                         # show effective paths, models and port
+python cli.py search "photosynthesis" --limit 2
 ```
 
 `chats` prints the chat numbers used by `delete` and `export`; omitting `--output`
