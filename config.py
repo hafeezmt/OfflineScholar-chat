@@ -3,9 +3,16 @@ import os
 from pathlib import Path
 
 BASE = Path(__file__).parent
-LIBRARY_DIR = BASE / "library"
+
+
+def _path_env(name, default):
+    value = os.environ.get(name)
+    return Path(value).expanduser() if value else default
+
+
+LIBRARY_DIR = _path_env("OS_LIBRARY_DIR", BASE / "library")
 SAVED_DIR = LIBRARY_DIR / "saved_pages"
-DB_PATH = BASE / "scholar.db"
+DB_PATH = _path_env("OS_DB_PATH", BASE / "scholar.db")
 
 
 def _int_env(name, default, minimum=1):
