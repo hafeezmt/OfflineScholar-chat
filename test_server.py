@@ -241,6 +241,20 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(response.json()["message"], "Removed cells.txt")
         remove_note.assert_called_once_with("cells.txt")
 
+    def test_notes_search_returns_matching_passages(self):
+        hit = {"path": "/tmp/cells.txt", "label": "part 1", "text": "Cells are alive.",
+               "score": 0.9}
+        with mock.patch.object(server.services, "search_notes", return_value=[hit]) as search:
+            response = self.client.get("/api/notes/search", params={"q": "cells", "limit": 3})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["query"], "cells")
+        self.assertEqual(response.json()["results"][0]["text"], "Cells are alive.")
+        search.assert_called_once_with("cells", 3)
+
+    def test_notes_search_rejects_an_empty_query(self):
+        response = self.client.get("/api/notes/search", params={"q": "   "})
+        self.assertEqual(response.status_code, 400)
+
     def test_notes_endpoints(self):
         files = [{"name": "cells.txt", "size": 64, "state": "indexed"}]
         summary = {"files": 1, "indexed": 1, "size": 64}

@@ -281,6 +281,14 @@ def notes():
     return _notes_payload()
 
 
+@app.get("/api/notes/search")
+def search_notes(q: str = "", limit: int = 4):
+    query = q.strip()
+    if not query:
+        raise HTTPException(status_code=400, detail="Search query cannot be empty")
+    return {"query": query, "results": services.search_notes(query, max(1, min(limit, 20)))}
+
+
 @app.post("/api/notes/upload")
 async def upload_notes(files: list[UploadFile] = File(...)):
     payload = []
