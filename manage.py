@@ -288,6 +288,7 @@ def main(argv=None):
     status_parser = commands.add_parser("status", aliases=["ps"],
                                         help="show whether the app is running")
     status_parser.add_argument("--port", type=int, help="port of the running app")
+    status_parser.add_argument("--json", action="store_true", help="print machine-readable status")
     args = parser.parse_args(argv)
 
     if not args.command:
@@ -308,7 +309,12 @@ def main(argv=None):
             print(f"OfflineScholar restarted at {url}")
         elif args.command in {"status", "ps"}:
             status = fetch_status(args.port)
-            if status:
+            if args.json:
+                payload = {"running": bool(status), "url": server_url(args.port)}
+                if status:
+                    payload.update(status)
+                print(json.dumps(payload, indent=2, sort_keys=True))
+            elif status:
                 print(f"OfflineScholar is running at {server_url(args.port)}")
                 print(f"Model: {status.get('model')}")
                 print("Stop it with: offlinescholar stop")
