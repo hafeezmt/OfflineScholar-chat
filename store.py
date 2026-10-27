@@ -138,6 +138,12 @@ def conversation_exists(con, conversation_id):
     return con.execute("SELECT 1 FROM conversations WHERE id=?", (conversation_id,)).fetchone() is not None
 
 
+def conversation_title(con, conversation_id):
+    """Return a chat title, or None when the chat does not exist."""
+    row = con.execute("SELECT title FROM conversations WHERE id=?", (conversation_id,)).fetchone()
+    return row[0] if row else None
+
+
 def list_conversations(con, limit=100):
     rows = con.execute(
         """

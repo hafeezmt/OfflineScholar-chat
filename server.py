@@ -142,12 +142,12 @@ def clear_conversations():
 def get_conversation(conversation_id: int):
     con = store.connect()
     try:
-        if not store.conversation_exists(con, conversation_id):
+        title = store.conversation_title(con, conversation_id)
+        if title is None:
             raise HTTPException(status_code=404, detail="Conversation not found")
-        row = con.execute("SELECT title FROM conversations WHERE id=?", (conversation_id,)).fetchone()
         return {
             "id": conversation_id,
-            "title": row[0],
+            "title": title,
             "messages": store.conversation_messages(con, conversation_id),
         }
     finally:
@@ -158,11 +158,9 @@ def get_conversation(conversation_id: int):
 def export_conversation(conversation_id: int):
     con = store.connect()
     try:
-        if not store.conversation_exists(con, conversation_id):
+        title = store.conversation_title(con, conversation_id)
+        if title is None:
             raise HTTPException(status_code=404, detail="Conversation not found")
-        title = con.execute(
-            "SELECT title FROM conversations WHERE id=?", (conversation_id,)
-        ).fetchone()[0]
         markdown = store.conversation_markdown(con, conversation_id)
     finally:
         con.close()

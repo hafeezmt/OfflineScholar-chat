@@ -39,6 +39,11 @@ class ConversationMarkdownTests(unittest.TestCase):
 
         self.assertEqual(store.conversation_markdown(self.con, conversation_id), "# New chat\n")
 
+    def test_conversation_title_returns_none_for_a_missing_chat(self):
+        conversation_id = store.create_conversation(self.con, "Physics")
+        self.assertEqual(store.conversation_title(self.con, conversation_id), "Physics")
+        self.assertIsNone(store.conversation_title(self.con, 9999))
+
     def test_list_reports_the_number_of_messages(self):
         conversation_id = store.create_conversation(self.con, "Physics")
         store.append_message(self.con, conversation_id, "user", "one")
