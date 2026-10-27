@@ -128,6 +128,16 @@ def new_conversation():
     return {"id": conversation_id, "title": "New chat", "messages": []}
 
 
+@app.delete("/api/conversations")
+def clear_conversations():
+    con = store.connect()
+    try:
+        deleted = store.clear_conversations(con)
+    finally:
+        con.close()
+    return {"deleted": deleted}
+
+
 @app.get("/api/conversations/{conversation_id}")
 def get_conversation(conversation_id: int):
     con = store.connect()

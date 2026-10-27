@@ -65,6 +65,16 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(self.client.get(f"/api/conversations/{conversation_id}").status_code, 404)
         self.assertEqual(self.client.delete(f"/api/conversations/{conversation_id}").status_code, 404)
 
+    def test_clear_all_conversations(self):
+        self.client.post("/api/conversations")
+        self.client.post("/api/conversations")
+
+        response = self.client.delete("/api/conversations")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"deleted": 2})
+        self.assertEqual(self.client.get("/api/conversations").json()["conversations"], [])
+
     def test_conversation_list_includes_message_counts(self):
         conversation_id = self.client.post("/api/conversations").json()["id"]
         con = store.connect(self.db)
