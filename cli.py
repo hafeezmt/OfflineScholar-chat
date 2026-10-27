@@ -9,6 +9,7 @@ from pathlib import Path
 import config
 import ingest
 import llm
+import manage
 import search
 import services
 import store
@@ -137,6 +138,17 @@ def cmd_export_all(args):
     return 0
 
 
+def cmd_config(args):
+    settings = manage.load_settings()
+    print(f"library: {config.LIBRARY_DIR}")
+    print(f"database: {config.DB_PATH}")
+    print(f"chat model: {settings['chat_model']}")
+    print(f"embed model: {settings['embed_model']}")
+    print(f"port: {settings['port']}")
+    print(f"low memory: {'yes' if config.LOW_MEMORY else 'no'}")
+    return 0
+
+
 def cmd_search(args):
     passages = search.find(args.query)
     if not passages:
@@ -191,6 +203,8 @@ def main(argv=None):
     p_export_all = sub.add_parser("export-all", help="export every saved chat as Markdown")
     p_export_all.add_argument("folder", help="folder to write the Markdown files into")
 
+    sub.add_parser("config", help="show the effective paths, models and port")
+
     p_search = sub.add_parser("search", help="search your notes")
     p_search.add_argument("query")
 
@@ -210,6 +224,7 @@ def main(argv=None):
         "delete": cmd_delete,
         "export": cmd_export,
         "export-all": cmd_export_all,
+        "config": cmd_config,
         "search": cmd_search,
         "ask": cmd_ask,
     }[args.command](args)

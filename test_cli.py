@@ -33,6 +33,19 @@ class CliTests(unittest.TestCase):
             self.assertEqual(code, 0)
             self.assertEqual(target.read_text(encoding="utf-8"), "# Notes\n")
 
+    def test_config_shows_the_effective_settings(self):
+        output = io.StringIO()
+        settings = {"chat_model": "gemma3:1b", "embed_model": "embed:33m", "port": 7860}
+        with mock.patch.object(cli.manage, "load_settings", return_value=settings), \
+                contextlib.redirect_stdout(output):
+            code = cli.main(["config"])
+        self.assertEqual(code, 0)
+        text = output.getvalue()
+        self.assertIn("library:", text)
+        self.assertIn("database:", text)
+        self.assertIn("gemma3:1b", text)
+        self.assertIn("7860", text)
+
     def test_export_all_writes_one_file_per_chat(self):
         conversations = [
             {"id": 1, "title": "Physics revision", "updated": 0, "preview": "", "messages": 2},
