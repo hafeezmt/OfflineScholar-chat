@@ -163,8 +163,8 @@ def list_conversations(con, limit=100):
 def conversation_messages(con, conversation_id, limit=None):
     sql = "SELECT role, content FROM messages WHERE conversation_id=? ORDER BY id"
     rows = con.execute(sql, (conversation_id,)).fetchall()
-    if limit:
-        rows = rows[-limit:]
+    if limit is not None:
+        rows = [] if limit <= 0 else rows[-limit:]
     return [{"role": r[0], "content": r[1]} for r in rows]
 
 

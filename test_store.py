@@ -69,6 +69,12 @@ class ConversationMarkdownTests(unittest.TestCase):
     def test_an_unknown_conversation_returns_none(self):
         self.assertIsNone(store.conversation_markdown(self.con, 9999))
 
+    def test_zero_message_limit_returns_no_history(self):
+        conversation_id = store.create_conversation(self.con, "Physics")
+        store.append_message(self.con, conversation_id, "user", "What is force?")
+
+        self.assertEqual(store.conversation_messages(self.con, conversation_id, limit=0), [])
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
