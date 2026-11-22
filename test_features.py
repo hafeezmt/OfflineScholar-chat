@@ -82,6 +82,13 @@ class StoreTests(unittest.TestCase):
         hits = store.semantic_search(self.con, [1, 0, 0, 0], 10)
         self.assertEqual([h["path"] for h in hits], ["a.txt"])
 
+    def test_non_finite_embedding_values_are_treated_as_zero(self):
+        store.add_chunks(self.con, "notes.txt", [("p", "alpha", [float("nan"), 1.0])])
+        self.con.commit()
+
+        hits = store.semantic_search(self.con, [0.0, 1.0], 10)
+        self.assertEqual([h["path"] for h in hits], ["notes.txt"])
+
 
 class IngestTests(unittest.TestCase):
     def setUp(self):

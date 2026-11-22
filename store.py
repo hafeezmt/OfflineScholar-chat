@@ -3,6 +3,7 @@ import re
 import sqlite3
 import time
 from array import array
+import math
 
 import config
 
@@ -54,7 +55,7 @@ def remove_file(con, path):
 
 
 def _normalise(values):
-    vector = [float(value) for value in values]
+    vector = [float(value) if math.isfinite(float(value)) else 0.0 for value in values]
     norm = sum(value * value for value in vector) ** 0.5
     return [value / norm for value in vector] if norm else vector
 
