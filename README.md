@@ -432,6 +432,18 @@ Answers that reach the token limit stop at a full stop instead of being cut mid-
 On low-RAM machines answers are shorter (about 180 words) to avoid long waits. If you need a
 longer answer, raise `OS_NUM_PREDICT`, or use `OS_NUM_PREDICT=512 offlinescholar restart`.
 
+## Run the tests
+
+The core test suite does not need Ollama or internet access:
+
+```bash
+python -m pip install -r requirements.txt
+python -m unittest discover -v
+```
+
+Some optional Gradio checks are skipped when Gradio is not installed. Install
+`-r requirements-gradio.txt` when working on the legacy interface.
+
 ## License
 
 MIT. See [LICENSE](LICENSE).
