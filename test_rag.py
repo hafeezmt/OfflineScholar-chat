@@ -112,6 +112,18 @@ class RetrievalGatingTests(unittest.TestCase):
         self.assertEqual(hits[0]["id"], 2)
 
 
+class SentenceCompletionTests(unittest.TestCase):
+    def test_split_keeps_only_complete_sentences(self):
+        complete, tail = llm._split_complete("Photosynthesis needs light. The unfinished")
+        self.assertEqual(complete, "Photosynthesis needs light.")
+        self.assertEqual(tail, " The unfinished")
+
+    def test_split_returns_no_complete_prefix_without_terminator(self):
+        complete, tail = llm._split_complete("An unfinished answer")
+        self.assertEqual(complete, "")
+        self.assertEqual(tail, "An unfinished answer")
+
+
 class PromptTests(unittest.TestCase):
     def setUp(self):
         self._low = config.LOW_MEMORY
