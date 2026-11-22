@@ -113,6 +113,18 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(response.status_code, 404)
         self.assertEqual(response.json()["detail"], "Conversation not found")
 
+    def test_renaming_an_unknown_conversation_returns_404(self):
+        response = self.client.patch("/api/conversations/99999", json={"title": "Physics"})
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.json()["detail"], "Conversation not found")
+
+    def test_renaming_with_an_empty_title_returns_400(self):
+        conversation_id = self.client.post("/api/conversations").json()["id"]
+        response = self.client.patch(
+            f"/api/conversations/{conversation_id}", json={"title": "   "})
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["detail"], "Title cannot be empty")
+
     def test_deleting_an_unknown_conversation_returns_404(self):
         response = self.client.delete("/api/conversations/99999")
         self.assertEqual(response.status_code, 404)
