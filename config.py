@@ -1,4 +1,5 @@
 """OfflineScholar settings. Change models with environment variables, no code edits needed."""
+import math
 import os
 from pathlib import Path
 
@@ -24,9 +25,12 @@ def _int_env(name, default, minimum=1):
 
 def _float_env(name, default, minimum=0.0, maximum=2.0):
     try:
-        return min(maximum, max(minimum, float(os.environ[name])))
+        value = float(os.environ[name])
     except (KeyError, ValueError):
         return default
+    if not math.isfinite(value):
+        return default
+    return min(maximum, max(minimum, value))
 
 
 def _bool_env(name, default):

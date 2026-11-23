@@ -26,6 +26,11 @@ class EnvironmentHelperTests(unittest.TestCase):
         with mock.patch.dict(os.environ, {"OS_TEST_FLOAT": "-1"}, clear=True):
             self.assertEqual(config._float_env("OS_TEST_FLOAT", 0.5, 0.0, 2.0), 0.0)
 
+    def test_float_env_uses_default_for_non_finite_values(self):
+        for value in ("nan", "inf", "-inf"):
+            with mock.patch.dict(os.environ, {"OS_TEST_FLOAT": value}, clear=True):
+                self.assertEqual(config._float_env("OS_TEST_FLOAT", 0.5), 0.5, value)
+
     def test_bool_env_accepts_common_true_and_false_values(self):
         for value in ("1", "true", "YES", "on"):
             with mock.patch.dict(os.environ, {"OS_TEST_BOOL": value}, clear=True):
