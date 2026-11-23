@@ -391,6 +391,18 @@ Run `offlinescholar status` and check `~/OfflineScholar/server.log`. Common caus
 unreachable Ollama service or a port already in use. Start Ollama with `ollama serve`, or try
 another port with `OS_PORT=7861 offlinescholar up`.
 
+If the log says `ModuleNotFoundError` for a package such as `uvicorn`, repair the app's
+virtual environment from its install folder:
+
+```bash
+./venv/bin/python -m ensurepip --upgrade
+./venv/bin/python -m pip install -r requirements.txt
+```
+
+On Windows, use `venv\Scripts\python.exe` instead of `./venv/bin/python`. Then start the app
+again. The installer now checks that all required server packages are importable before it
+finishes.
+
 ### `ollama ps` still shows models
 
 Run `offlinescholar stop`. It explicitly unloads the chat and embedding models. If you started

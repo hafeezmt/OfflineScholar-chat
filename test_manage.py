@@ -73,6 +73,30 @@ class ProcessTests(unittest.TestCase):
     def test_url_uses_port(self):
         self.assertEqual(manage.server_url(9000), "http://127.0.0.1:9000")
 
+    def test_runtime_dependency_check_reports_missing_modules(self):
+        with mock.patch.object(manage.importlib.util, "find_spec",
+                               side_effect=lambda name: None if name == "uvicorn" else object()):
+            self.assertEqual(manage._missing_runtime_modules(), ["uvicorn"])
+
+    def test_start_explains_how_to_repair_missing_dependencies(self):
+        with mock.patch.object(manage, "_missing_runtime_modules", return_value=["uvicorn"]):
+            with self.assertRaisesRegex(RuntimeError, "Required Python packages are missing: uvicorn") as raised:
+                manage.start()
+        self.assertIn("-m ensurepip --upgrade", str(raised.exception))
+        self.assertIn("requirements.txt", str(raised.exception))
+
+    def test_start_reuses_a_running_server_without_runtime_imports(self):
+        running = {"model": "gemma3:1b"}
+        with mock.patch.object(manage, "load_settings", return_value={"port": 7860}), \
+                mock.patch.object(manage, "fetch_status", return_value=running), \
+                mock.patch.object(manage, "_missing_runtime_modules",
+                                  side_effect=AssertionError("should not check imports")):
+            url, started, status = manage.start()
+
+        self.assertEqual(url, "http://127.0.0.1:7860")
+        self.assertFalse(started)
+        self.assertEqual(status, running)
+
 
 class CommandLineTests(unittest.TestCase):
     def test_up_passes_the_port_and_no_open_flag(self):

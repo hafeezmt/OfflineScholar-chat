@@ -364,9 +364,17 @@ if (-not (Test-Path $venvPython)) {
         Stop-Install "Could not create the Python environment."
     }
 }
+& $venvPython -m ensurepip --upgrade
+if ($LASTEXITCODE -ne 0) {
+    Stop-Install "Could not install pip in the Python environment."
+}
 & $venvPython -m pip install --disable-pip-version-check -r (Join-Path $InstallDir "requirements.txt")
 if ($LASTEXITCODE -ne 0) {
     Stop-Install "Could not install the Python packages."
+}
+& $venvPython -c "import fastapi, ollama, pypdf, multipart, uvicorn"
+if ($LASTEXITCODE -ne 0) {
+    Stop-Install "The Python environment is missing required packages. Check pip output and rerun the installer."
 }
 
 $settings = @{

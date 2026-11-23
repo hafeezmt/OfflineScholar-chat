@@ -1,5 +1,6 @@
 """Start, stop and inspect the local OfflineScholar server."""
 import argparse
+import importlib.util
 import json
 import os
 import shutil
@@ -21,6 +22,7 @@ SETTINGS_FILE = BASE / "settings.json"
 DEFAULT_CHAT_MODEL = "gemma3:1b"
 DEFAULT_EMBED_MODEL = "snowflake-arctic-embed:33m"
 DEFAULT_PORT = 7860
+RUNTIME_MODULES = ("fastapi", "ollama", "pypdf", "multipart", "uvicorn")
 
 
 def load_settings():
@@ -129,6 +131,10 @@ def _model_override(settings):
     return settings["chat_model"]
 
 
+def _missing_runtime_modules():
+    return [module for module in RUNTIME_MODULES if importlib.util.find_spec(module) is None]
+
+
 def start(port=None, open_browser=False):
     settings = load_settings()
     port = port or settings["port"]
@@ -137,6 +143,17 @@ def start(port=None, open_browser=False):
         if open_browser:
             webbrowser.open(server_url(port))
         return server_url(port), False, status
+
+    missing = _missing_runtime_modules()
+    if missing:
+        python = f'"{sys.executable}"'
+        requirements = f'"{BASE / "requirements.txt"}"'
+        raise RuntimeError(
+            f"Required Python packages are missing: {', '.join(missing)}.\n"
+            f"Repair this installation with:\n"
+            f"{python} -m ensurepip --upgrade && "
+            f"{python} -m pip install -r {requirements}"
+        )
 
     pid = _read_pid()
     if pid and _pid_alive(pid) and _pid_is_ours(pid):

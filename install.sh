@@ -418,7 +418,12 @@ start_ollama() {
 install_python_packages() {
   info "Setting up the Python environment"
   python3 -m venv "$INSTALL_DIR/venv"
-  "$INSTALL_DIR/venv/bin/python" -m pip install --disable-pip-version-check -r "$INSTALL_DIR/requirements.txt"
+  local venv_python="$INSTALL_DIR/venv/bin/python"
+  "$venv_python" -m ensurepip --upgrade
+  "$venv_python" -m pip install --disable-pip-version-check -r "$INSTALL_DIR/requirements.txt"
+  if ! "$venv_python" -c 'import fastapi, ollama, pypdf, multipart, uvicorn'; then
+    fail "The Python environment is missing required packages. Check pip output and rerun the installer."
+  fi
 }
 
 ensure_desktop_toolkit() {
