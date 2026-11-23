@@ -1,6 +1,6 @@
 """Read files from the library folder, split them into chunks and index them."""
-import html
 import re
+import xml.etree.ElementTree as ET
 import zipfile
 from pathlib import Path
 
@@ -25,10 +25,20 @@ def read_sections(path: Path):
         return out
     if ext == ".docx":
         with zipfile.ZipFile(path) as z:
-            xml = z.read("word/document.xml").decode("utf-8", errors="ignore")
-        xml = re.sub(r"</w:p>", "\n", xml)
-        xml = re.sub(r"<w:(?:tab|br)\s*/>", " ", xml)
-        return [("full text", html.unescape(re.sub(r"<[^>]+>", "", xml)))]
+            root = ET.fromstring(z.read("word/document.xml"))
+        namespace = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
+        paragraphs = []
+        for paragraph in root.iter(f"{namespace}p"):
+            pieces = []
+            for element in paragraph.iter():
+                if element.tag == f"{namespace}t":
+                    pieces.append(element.text or "")
+                elif element.tag == f"{namespace}tab":
+                    pieces.append("\t")
+                elif element.tag in (f"{namespace}br", f"{namespace}cr"):
+                    pieces.append("\n")
+            paragraphs.append("".join(pieces))
+        return [("full text", "\n".join(paragraphs))]
     return []
 
 

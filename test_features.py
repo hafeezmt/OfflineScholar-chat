@@ -1,6 +1,7 @@
 """Tests for indexing, storage, uploads and the web-page reader. No Ollama or internet needed."""
 import tempfile
 import unittest
+import zipfile
 from pathlib import Path
 from unittest import mock
 
@@ -164,6 +165,23 @@ class IngestTests(unittest.TestCase):
         self.assertIn("Meaning-based search is off", message)
         self.assertIsNone(store.get_meta(self.con, "embed_model"))
         self.assertTrue(store.keyword_search(self.con, "force", 3))
+
+    def test_docx_reader_extracts_namespaced_paragraphs_and_breaks(self):
+        docx = self.library / "notes.docx"
+        document = (
+            '<x:document xmlns:x="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+            '<x:body><x:p><x:r><x:t>Force &amp; mass</x:t></x:r><x:r><x:tab/>'
+            '<x:t>acceleration</x:t></x:r></x:p>'
+            '<x:p><x:r><x:t>Second paragraph</x:t><x:br/><x:t>continues</x:t>'
+            '</x:r></x:p></x:body></x:document>'
+        )
+        with zipfile.ZipFile(docx, "w") as archive:
+            archive.writestr("word/document.xml", document)
+
+        self.assertEqual(
+            ingest.read_sections(docx),
+            [("full text", "Force & mass\tacceleration\nSecond paragraph\ncontinues")],
+        )
 
 
 @unittest.skipIf(app is None, "optional Gradio UI is not installed")
