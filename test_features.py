@@ -108,6 +108,15 @@ class StoreTests(unittest.TestCase):
         hits = store.semantic_search(self.con, [0.0, 0.0, 1.0], 10)
         self.assertEqual([h["path"] for h in hits], ["notes.txt"])
 
+    def test_large_embedding_values_are_normalized_without_overflow(self):
+        vector = [1e308, 1e308]
+        store.add_chunks(self.con, "notes.txt", [("p", "alpha", vector)])
+        self.con.commit()
+
+        hits = store.semantic_search(self.con, vector, 10)
+        self.assertEqual([h["path"] for h in hits], ["notes.txt"])
+        self.assertAlmostEqual(hits[0]["score"], 1.0)
+
 
 class IngestTests(unittest.TestCase):
     def setUp(self):

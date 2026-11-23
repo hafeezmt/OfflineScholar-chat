@@ -62,7 +62,7 @@ def _normalise(values):
         except (TypeError, ValueError):
             number = 0.0
         vector.append(number if math.isfinite(number) else 0.0)
-    norm = sum(value * value for value in vector) ** 0.5
+    norm = math.hypot(*vector)
     return [value / norm for value in vector] if norm else vector
 
 
