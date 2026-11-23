@@ -65,7 +65,7 @@ def _normalise(values):
     for value in values:
         try:
             number = float(value)
-        except (TypeError, ValueError):
+        except (OverflowError, TypeError, ValueError):
             number = 0.0
         vector.append(number if math.isfinite(number) else 0.0)
     norm = math.hypot(*vector)

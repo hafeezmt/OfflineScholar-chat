@@ -127,6 +127,13 @@ class StoreTests(unittest.TestCase):
         hits = store.semantic_search(self.con, [0.0, 0.0, 1.0], 10)
         self.assertEqual([h["path"] for h in hits], ["notes.txt"])
 
+    def test_integer_values_too_large_for_float_are_ignored(self):
+        store.add_chunks(self.con, "notes.txt", [("p", "alpha", [10 ** 10000, 1.0])])
+        self.con.commit()
+
+        hits = store.semantic_search(self.con, [0.0, 1.0], 10)
+        self.assertEqual([h["path"] for h in hits], ["notes.txt"])
+
     def test_large_embedding_values_are_normalized_without_overflow(self):
         vector = [1e308, 1e308]
         store.add_chunks(self.con, "notes.txt", [("p", "alpha", vector)])
