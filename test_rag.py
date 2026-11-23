@@ -112,6 +112,14 @@ class RetrievalGatingTests(unittest.TestCase):
         self.assertEqual(hits[0]["id"], 2)
 
 
+class LatestUploadTests(unittest.TestCase):
+    def test_non_positive_passage_limit_returns_no_results(self):
+        with mock.patch.object(ingest, "library_files") as library_files:
+            self.assertEqual(services.latest_upload_passages(limit=0), [])
+            self.assertEqual(services.latest_upload_passages(limit=-1), [])
+        library_files.assert_not_called()
+
+
 class SentenceCompletionTests(unittest.TestCase):
     def test_split_keeps_only_complete_sentences(self):
         complete, tail = llm._split_complete("Photosynthesis needs light. The unfinished")

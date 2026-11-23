@@ -150,6 +150,8 @@ def clear_notes_index():
 
 def latest_upload_passages(limit=4):
     """Passages from the most recently changed file in the notes library."""
+    if limit <= 0:
+        return []
     files = ingest.library_files()
     if not files:
         return []
