@@ -60,6 +60,18 @@ class StoreTests(unittest.TestCase):
         self.con.commit()
         self.assertEqual(store.keyword_search(self.con, "what is the", 5), [])
 
+    def test_search_limits_at_or_below_zero_return_no_results(self):
+        store.add_chunks(self.con, "notes.txt", [
+            ("full", "force equals mass times acceleration", [1.0, 0.0]),
+            ("part 2", "force changes motion", [0.8, 0.2]),
+        ])
+        self.con.commit()
+
+        self.assertEqual(store.keyword_search(self.con, "force acceleration", 0), [])
+        self.assertEqual(store.keyword_search(self.con, "force acceleration", -1), [])
+        self.assertEqual(store.semantic_search(self.con, [1.0, 0.0], -1), [])
+        self.assertEqual(store.hybrid_search(self.con, "force acceleration", [1.0, 0.0], -1), [])
+
     def test_clear_index_keeps_files_table_empty(self):
         store.add_chunks(self.con, "notes.txt", [("full", "hello world", None)])
         self.con.execute("INSERT INTO files VALUES ('notes.txt', 1, 2, 0)")

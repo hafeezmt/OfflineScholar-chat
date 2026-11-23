@@ -54,6 +54,12 @@ class ConversationMarkdownTests(unittest.TestCase):
         self.assertEqual(listed[0]["id"], conversation_id)
         self.assertEqual(listed[0]["messages"], 2)
 
+    def test_non_positive_list_limit_returns_no_conversations(self):
+        store.create_conversation(self.con, "Physics")
+
+        self.assertEqual(store.list_conversations(self.con, limit=0), [])
+        self.assertEqual(store.list_conversations(self.con, limit=-1), [])
+
     def test_clear_conversations_removes_every_chat_and_message(self):
         first = store.create_conversation(self.con, "Physics")
         second = store.create_conversation(self.con, "Chemistry")
@@ -74,6 +80,12 @@ class ConversationMarkdownTests(unittest.TestCase):
         store.append_message(self.con, conversation_id, "user", "What is force?")
 
         self.assertEqual(store.conversation_messages(self.con, conversation_id, limit=0), [])
+
+    def test_negative_message_limit_returns_no_history(self):
+        conversation_id = store.create_conversation(self.con, "Physics")
+        store.append_message(self.con, conversation_id, "user", "What is force?")
+
+        self.assertEqual(store.conversation_messages(self.con, conversation_id, limit=-1), [])
 
 
 if __name__ == "__main__":

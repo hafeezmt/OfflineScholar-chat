@@ -77,6 +77,8 @@ def add_chunks(con, path, rows):
 
 
 def keyword_search(con, query, k):
+    if k <= 0:
+        return []
     words = [w for w in re.findall(r"\w{2,}", query.lower()) if w not in STOP]
     if not words:
         return []
@@ -90,6 +92,8 @@ def keyword_search(con, query, k):
 
 
 def semantic_search(con, qvec, k):
+    if k <= 0:
+        return []
     rows = con.execute("SELECT id,path,label,text,emb FROM chunks WHERE emb IS NOT NULL").fetchall()
     if not rows:
         return []
@@ -115,6 +119,8 @@ def semantic_search(con, qvec, k):
 
 def hybrid_search(con, query, qvec, k):
     """Combine keyword and meaning-based results (reciprocal rank fusion)."""
+    if k <= 0:
+        return []
     kw = keyword_search(con, query, k * 2)
     sem = semantic_search(con, qvec, k * 2) if qvec is not None else []
     if not sem:
@@ -152,6 +158,8 @@ def conversation_title(con, conversation_id):
 
 
 def list_conversations(con, limit=100):
+    if limit <= 0:
+        return []
     rows = con.execute(
         """
         SELECT c.id, c.title, c.updated,
