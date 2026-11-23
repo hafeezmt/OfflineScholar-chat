@@ -20,7 +20,9 @@ def connect(db_path=None):
     con.execute("PRAGMA foreign_keys=ON")
     con.executescript(
         """
-        CREATE TABLE IF NOT EXISTS files(path TEXT PRIMARY KEY, mtime REAL, size INTEGER, has_emb INTEGER);
+        CREATE TABLE IF NOT EXISTS files(
+            path TEXT PRIMARY KEY, mtime REAL, size INTEGER, has_emb INTEGER, digest TEXT
+        );
         CREATE TABLE IF NOT EXISTS chunks(id INTEGER PRIMARY KEY AUTOINCREMENT, path TEXT, label TEXT,
                                           text TEXT, emb BLOB);
         CREATE VIRTUAL TABLE IF NOT EXISTS chunks_fts USING fts5(text);
@@ -43,6 +45,10 @@ def connect(db_path=None):
         CREATE INDEX IF NOT EXISTS idx_conversations_updated ON conversations(updated DESC);
         """
     )
+    columns = {row[1] for row in con.execute("PRAGMA table_info(files)")}
+    if "digest" not in columns:
+        con.execute("ALTER TABLE files ADD COLUMN digest TEXT")
+    con.commit()
     return con
 
 

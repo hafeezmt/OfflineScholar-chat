@@ -1,4 +1,5 @@
 """Read files from the library folder, split them into chunks and index them."""
+import hashlib
 import re
 import xml.etree.ElementTree as ET
 import zipfile
@@ -117,6 +118,14 @@ def library_files(folder=None):
     return sorted(p for p in folder.rglob("*") if p.is_file() and p.suffix.lower() in config.SUPPORTED)
 
 
+def _content_digest(path):
+    digest = hashlib.sha256()
+    with path.open("rb") as file:
+        for block in iter(lambda: file.read(64 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
 def scan_library(con, embed_fn=None, folder=None):
     """Index new or changed files. embed_fn(list_of_texts) -> list of vectors (optional)."""
     notes, added, skipped = [], 0, 0
@@ -144,10 +153,18 @@ def scan_library(con, embed_fn=None, folder=None):
             if stored_model is not None:
                 notes.append(f"Embedding model changed to {config.EMBED_MODEL}; rebuilding note vectors.")
     for p in files:
-        st = p.stat()
-        row = con.execute("SELECT mtime,size,has_emb FROM files WHERE path=?", (str(p),)).fetchone()
-        unchanged = row and row[0] == st.st_mtime and row[1] == st.st_size
-        if unchanged and (row[2] or not embed_ok):
+        try:
+            st = p.stat()
+            digest = _content_digest(p)
+        except OSError as e:
+            store.remove_file(con, str(p))
+            notes.append(f"Could not read {p.name}: {e}")
+            continue
+        row = con.execute(
+            "SELECT digest,has_emb FROM files WHERE path=?", (str(p),)
+        ).fetchone()
+        unchanged = row and row[0] == digest
+        if unchanged and (row[1] or not embed_ok):
             skipped += 1
             continue
         try:
@@ -183,8 +200,8 @@ def scan_library(con, embed_fn=None, folder=None):
                 notes.append(f"Meaning-based search is off ({e}). Using keyword search.")
         store.remove_file(con, str(p))
         store.add_chunks(con, str(p), [(l, t, v) for (l, t), v in zip(pieces, vectors)])
-        con.execute("INSERT OR REPLACE INTO files VALUES (?,?,?,?)",
-                    (str(p), st.st_mtime, st.st_size, 1 if vectors[0] is not None else 0))
+        con.execute("INSERT OR REPLACE INTO files VALUES (?,?,?,?,?)",
+                    (str(p), st.st_mtime, st.st_size, 1 if vectors[0] is not None else 0, digest))
         added += 1
     con.commit()
     if embed_fn is not None and embed_ok:

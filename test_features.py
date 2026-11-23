@@ -1,4 +1,6 @@
 """Tests for indexing, storage, uploads and the web-page reader. No Ollama or internet needed."""
+import os
+import sqlite3
 import tempfile
 import unittest
 import zipfile
@@ -75,11 +77,27 @@ class StoreTests(unittest.TestCase):
 
     def test_clear_index_keeps_files_table_empty(self):
         store.add_chunks(self.con, "notes.txt", [("full", "hello world", None)])
-        self.con.execute("INSERT INTO files VALUES ('notes.txt', 1, 2, 0)")
+        self.con.execute(
+            "INSERT INTO files(path, mtime, size, has_emb) VALUES ('notes.txt', 1, 2, 0)")
         self.con.commit()
         store.clear_index(self.con)
         self.assertEqual(self.con.execute("SELECT count(*) FROM chunks").fetchone()[0], 0)
         self.assertEqual(self.con.execute("SELECT count(*) FROM files").fetchone()[0], 0)
+
+    def test_existing_database_gains_the_content_digest_column(self):
+        path = Path(self.tmp.name) / "old.db"
+        old = sqlite3.connect(path)
+        old.execute(
+            "CREATE TABLE files(path TEXT PRIMARY KEY, mtime REAL, size INTEGER, has_emb INTEGER)")
+        old.close()
+
+        upgraded = store.connect(path)
+        try:
+            columns = {row[1] for row in upgraded.execute("PRAGMA table_info(files)")}
+        finally:
+            upgraded.close()
+
+        self.assertIn("digest", columns)
 
     def test_deleting_a_conversation_cascades_to_its_messages(self):
         conversation_id = store.create_conversation(self.con, "Physics")
@@ -157,6 +175,19 @@ class IngestTests(unittest.TestCase):
         self.assertIn("Could not read broken.docx", message)
         self.assertEqual(
             self.con.execute("SELECT count(*) FROM chunks WHERE path=?", (str(bad),)).fetchone()[0], 0)
+
+    def test_same_size_content_change_is_reindexed_when_timestamp_is_unchanged(self):
+        note = self.library / "n.txt"
+        timestamp = note.stat().st_mtime
+        ingest.scan_library(self.con, folder=self.library)
+        note.write_text("force equals mass times deceleration")
+        os.utime(note, (timestamp, timestamp))
+
+        message = ingest.scan_library(self.con, folder=self.library)
+
+        self.assertIn("Indexed 1 new or changed file(s)", message)
+        self.assertTrue(store.keyword_search(self.con, "deceleration", 3))
+        self.assertFalse(store.keyword_search(self.con, "acceleration", 3))
 
     def test_failed_embeddings_leave_model_unrecorded(self):
         config.EMBED_MODEL = "model-c"
