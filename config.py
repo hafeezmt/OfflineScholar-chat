@@ -11,6 +11,11 @@ def _path_env(name, default):
     return Path(value).expanduser() if value else default
 
 
+def _text_env(name, default):
+    value = os.environ.get(name, "").strip()
+    return value or default
+
+
 LIBRARY_DIR = _path_env("OS_LIBRARY_DIR", BASE / "library")
 SAVED_DIR = LIBRARY_DIR / "saved_pages"
 DB_PATH = _path_env("OS_DB_PATH", BASE / "scholar.db")
@@ -55,11 +60,11 @@ AVAILABLE_MEMORY_GB = _available_memory_gb()
 LOW_MEMORY = _bool_env("OS_LOW_MEMORY", AVAILABLE_MEMORY_GB is not None and AVAILABLE_MEMORY_GB < 5.5)
 
 # Answer model (Gemma 4, runs locally through Ollama)
-CHAT_MODEL_EXPLICIT = "OS_MODEL" in os.environ
-CHAT_MODEL = os.environ.get("OS_MODEL", "gemma4:e2b-it-qat")
+CHAT_MODEL = _text_env("OS_MODEL", "gemma4:e2b-it-qat")
+CHAT_MODEL_EXPLICIT = bool(os.environ.get("OS_MODEL", "").strip())
 
 # Search model (Snowflake Arctic Embed, open-weight, runs locally through Ollama)
-EMBED_MODEL = os.environ.get("OS_EMBED", "snowflake-arctic-embed:33m")
+EMBED_MODEL = _text_env("OS_EMBED", "snowflake-arctic-embed:33m")
 USE_EMBEDDINGS = _bool_env("OS_EMBEDDINGS", True)
 QUERY_PREFIX = "Represent this sentence for searching relevant passages: "
 
@@ -94,7 +99,7 @@ MAX_MESSAGE_CHARS = _int_env("OS_MAX_MESSAGE_CHARS", 20_000, minimum=200)
 NUM_PREDICT = _int_env("OS_NUM_PREDICT", 256 if LOW_MEMORY else 512, minimum=32)
 NUM_THREAD = _int_env("OS_NUM_THREAD", FAST_THREADS if LOW_MEMORY else max(1, CPU_COUNT // 2), minimum=1)
 NUM_BATCH = _int_env("OS_NUM_BATCH", 64 if LOW_MEMORY else 128, minimum=16)
-KEEP_ALIVE = os.environ.get("OS_KEEP_ALIVE", "30m")
+KEEP_ALIVE = _text_env("OS_KEEP_ALIVE", "30m")
 
 # Keep chats fast: index new notes and preload the chat model in the background.
 AUTO_INDEX = _bool_env("OS_AUTO_INDEX", True)

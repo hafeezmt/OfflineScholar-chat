@@ -46,6 +46,13 @@ class EnvironmentHelperTests(unittest.TestCase):
         with mock.patch.dict(os.environ, {}, clear=True):
             self.assertEqual(config._path_env("OS_TEST_PATH", Path("/default")), Path("/default"))
 
+    def test_text_env_strips_values_and_uses_default_for_blank_values(self):
+        with mock.patch.dict(os.environ, {"OS_TEST_TEXT": "  custom  "}, clear=True):
+            self.assertEqual(config._text_env("OS_TEST_TEXT", "default"), "custom")
+        for value in ("", "   "):
+            with mock.patch.dict(os.environ, {"OS_TEST_TEXT": value}, clear=True):
+                self.assertEqual(config._text_env("OS_TEST_TEXT", "default"), "default")
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
