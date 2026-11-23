@@ -936,10 +936,11 @@ function renderNotes(data) {
     const name = document.createElement("span");
     name.className = "file-name";
     name.textContent = file.name;
-    name.title = file.name;
+    name.title = file.path || file.name;
     const sub = document.createElement("span");
     sub.className = "file-sub";
-    sub.textContent = prettySize(file.size) + " \u00b7 " + file.state;
+    sub.textContent = (file.path && file.path !== file.name ? file.path + " \u00b7 " : "") +
+      prettySize(file.size) + " \u00b7 " + file.state;
     meta.append(name, sub);
 
     const info = stateBadge(file.state);
@@ -951,9 +952,9 @@ function renderNotes(data) {
     remove.type = "button";
     remove.className = "file-delete";
     remove.title = "Remove from library";
-    remove.setAttribute("aria-label", "Remove " + file.name);
+    remove.setAttribute("aria-label", "Remove " + (file.path || file.name));
     remove.innerHTML = "&times;";
-    remove.addEventListener("click", () => removeNote(file.name));
+    remove.addEventListener("click", () => removeNote(file.path || file.name));
 
     item.append(icon, meta, badge, remove);
     el.fileList.append(item);

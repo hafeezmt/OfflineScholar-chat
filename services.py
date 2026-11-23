@@ -42,7 +42,12 @@ def library_files():
             state = "not indexed"
         else:
             state = "indexed" if indexed[str(p)] else "keyword only"
-        out.append({"name": p.name, "size": size, "state": state})
+        out.append({
+            "name": p.name,
+            "path": p.relative_to(config.LIBRARY_DIR).as_posix(),
+            "size": size,
+            "state": state,
+        })
     return out
 
 
@@ -119,12 +124,24 @@ def add_url(url):
 
 def remove_note(name):
     """Remove one file from the library and its index. Returns a friendly message."""
-    wanted = Path(name or "").name
+    wanted = str(name or "").strip()
     if not wanted:
         return "Choose a note to remove."
-    matches = [path for path in ingest.library_files() if path.name == wanted]
+    relative = Path(wanted)
+    if relative.is_absolute() or ".." in relative.parts:
+        return f"{wanted} is not in the library."
+    files = ingest.library_files()
+    if len(relative.parts) > 1:
+        matches = [
+            path for path in files
+            if path.relative_to(config.LIBRARY_DIR).as_posix() == relative.as_posix()
+        ]
+    else:
+        matches = [path for path in files if path.name == wanted]
     if not matches:
         return f"{wanted} is not in the library."
+    if len(matches) > 1:
+        return f"More than one note is named {wanted}; choose one by its library path."
     path = matches[0]
     con = store.connect()
     try:

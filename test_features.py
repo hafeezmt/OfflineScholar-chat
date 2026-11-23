@@ -361,6 +361,42 @@ class NoteRemovalTests(unittest.TestCase):
     def test_removing_an_unknown_note_is_reported(self):
         self.assertEqual(services.remove_note("missing.txt"), "missing.txt is not in the library.")
 
+    def test_removing_by_relative_path_selects_nested_duplicate_names(self):
+        first = self.library / "course-a" / "notes.txt"
+        second = self.library / "course-b" / "notes.txt"
+        first.parent.mkdir()
+        second.parent.mkdir()
+        first.write_text("first course")
+        second.write_text("second course")
+
+        message = services.remove_note("course-b/notes.txt")
+
+        self.assertEqual(message, "Removed course-b/notes.txt.")
+        self.assertTrue(first.exists())
+        self.assertFalse(second.exists())
+
+    def test_library_file_entries_include_relative_paths(self):
+        nested = self.library / "course" / "notes.txt"
+        nested.parent.mkdir()
+        nested.write_text("course notes")
+
+        files = services.library_files()
+
+        self.assertEqual(files[0]["name"], "notes.txt")
+        self.assertEqual(files[0]["path"], "course/notes.txt")
+
+    def test_ambiguous_basename_is_not_removed(self):
+        for folder in ("course-a", "course-b"):
+            directory = self.library / folder
+            directory.mkdir()
+            (directory / "notes.txt").write_text(folder)
+
+        message = services.remove_note("notes.txt")
+
+        self.assertIn("choose one by its library path", message)
+        self.assertTrue((self.library / "course-a" / "notes.txt").exists())
+        self.assertTrue((self.library / "course-b" / "notes.txt").exists())
+
     def test_path_arguments_cannot_escape_the_library(self):
         outside = self.root / "secret.txt"
         outside.write_text("do not delete")
