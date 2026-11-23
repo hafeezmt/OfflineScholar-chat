@@ -7,7 +7,7 @@ BASE = Path(__file__).parent
 
 
 def _path_env(name, default):
-    value = os.environ.get(name)
+    value = os.environ.get(name, "").strip()
     return Path(value).expanduser() if value else default
 
 

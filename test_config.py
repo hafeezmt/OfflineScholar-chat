@@ -45,6 +45,8 @@ class EnvironmentHelperTests(unittest.TestCase):
                              Path.home() / "study-notes")
         with mock.patch.dict(os.environ, {}, clear=True):
             self.assertEqual(config._path_env("OS_TEST_PATH", Path("/default")), Path("/default"))
+        with mock.patch.dict(os.environ, {"OS_TEST_PATH": "  "}, clear=True):
+            self.assertEqual(config._path_env("OS_TEST_PATH", Path("/default")), Path("/default"))
 
     def test_text_env_strips_values_and_uses_default_for_blank_values(self):
         with mock.patch.dict(os.environ, {"OS_TEST_TEXT": "  custom  "}, clear=True):
